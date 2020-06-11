@@ -5,11 +5,11 @@ target_link_libraries(cloud_node velodyne_rawdata
 install(TARGETS cloud_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_library(cloud_nodelet cloud_nodelet.cc convert.cc pointcloudXYZIR.cc pointcloudXYZIRADT.cc func.cc)
-add_dependencies(cloud_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(cloud_nodelet velodyne_rawdata
+add_library(vls_cloud_nodelet cloud_nodelet.cc convert.cc pointcloudXYZIR.cc pointcloudXYZIRADT.cc func.cc)
+add_dependencies(vls_cloud_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(vls_cloud_nodelet velodyne_rawdata
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${OpenCV_LIBS})
-install(TARGETS cloud_nodelet
+install(TARGETS vls_cloud_nodelet
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
@@ -21,11 +21,11 @@ target_link_libraries(interpolate_node
 install(TARGETS interpolate_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_library(interpolate_nodelet interpolate_nodelet.cc interpolate.cc pointcloudXYZIR.cc pointcloudXYZIRADT.cc func.cc)
-add_dependencies(interpolate_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(interpolate_nodelet
+add_library(vls_interpolate_nodelet interpolate_nodelet.cc interpolate.cc pointcloudXYZIR.cc pointcloudXYZIRADT.cc func.cc)
+add_dependencies(vls_interpolate_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(vls_interpolate_nodelet
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${OpenCV_LIBS})
-install(TARGETS interpolate_nodelet
+install(TARGETS vls_interpolate_nodelet
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
@@ -36,10 +36,10 @@ target_link_libraries(ringcolors_node
 install(TARGETS ringcolors_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_library(ringcolors_nodelet ringcolors_nodelet.cc colors.cc)
-target_link_libraries(ringcolors_nodelet
+add_library(vls_ringcolors_nodelet ringcolors_nodelet.cc colors.cc)
+target_link_libraries(vls_ringcolors_nodelet
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES})
-install(TARGETS ringcolors_nodelet
+install(TARGETS vls_ringcolors_nodelet
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
@@ -51,11 +51,11 @@ target_link_libraries(transform_node velodyne_rawdata
 install(TARGETS transform_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_library(transform_nodelet transform_nodelet.cc transform.cc pointcloudXYZIR.cc)
-add_dependencies(transform_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(transform_nodelet velodyne_rawdata
+add_library(vls_transform_nodelet transform_nodelet.cc transform.cc pointcloudXYZIR.cc)
+add_dependencies(vls_transform_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(vls_transform_nodelet velodyne_rawdata
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES})
-install(TARGETS transform_nodelet
+install(TARGETS vls_transform_nodelet
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})

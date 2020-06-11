@@ -8,9 +8,9 @@ target_link_libraries(velodyne_node
 )
 
 # build the nodelet version
-add_library(driver_nodelet nodelet.cc driver.cc)
-add_dependencies(driver_nodelet velodyne_vls_driver_gencfg)
-target_link_libraries(driver_nodelet
+add_library(vls_driver_nodelet nodelet.cc driver.cc)
+add_dependencies(vls_driver_nodelet velodyne_vls_driver_gencfg)
+target_link_libraries(vls_driver_nodelet
   velodyne_input
   ${catkin_LIBRARIES}
   ${libpcap_LIBRARIES}
@@ -21,6 +21,6 @@ install(TARGETS velodyne_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         COMPONENT main
 )
-install(TARGETS driver_nodelet
+install(TARGETS vls_driver_nodelet
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )

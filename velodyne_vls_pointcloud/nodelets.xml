@@ -1,6 +1,6 @@
 <class_libraries>
 
-  <library path="lib/libcloud_nodelet">
+  <library path="lib/libvls_cloud_nodelet">
     <class name="velodyne_vls_pointcloud/CloudNodelet"
            type="velodyne_pointcloud::CloudNodelet"
            base_class_type="nodelet::Nodelet">
@@ -10,7 +10,7 @@
     </class>
   </library>
 
-  <library path="lib/libinterpolate_nodelet">
+  <library path="lib/libvls_interpolate_nodelet">
     <class name="velodyne_vls_pointcloud/InterpolateNodelet"
            type="velodyne_pointcloud::InterpolateNodelet"
            base_class_type="nodelet::Nodelet">
@@ -20,7 +20,7 @@
     </class>
   </library>
 
-  <library path="lib/libringcolors_nodelet">
+  <library path="lib/libvls_ringcolors_nodelet">
     <class name="velodyne_vls_pointcloud/RingColorsNodelet"
            type="velodyne_pointcloud::RingColorsNodelet"
            base_class_type="nodelet::Nodelet">
@@ -31,7 +31,7 @@
     </class>
   </library>
 
-  <library path="lib/libtransform_nodelet">
+  <library path="lib/libvls_transform_nodelet">
     <class name="velodyne_vls_pointcloud/TransformNodelet"
            type="velodyne_pointcloud::TransformNodelet"
            base_class_type="nodelet::Nodelet">
