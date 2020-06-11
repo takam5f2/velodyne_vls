@@ -1,6 +1,6 @@
 <package>
 
-  <name>velodyne_driver</name>
+  <name>velodyne_vls_driver</name>
   <version>1.3.0</version>
   <description>
     ROS device driver for Velodyne 3D LIDARs.

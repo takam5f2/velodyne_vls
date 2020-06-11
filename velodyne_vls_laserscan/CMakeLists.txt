@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(velodyne_laserscan)
+project(velodyne_vls_laserscan)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -48,4 +48,3 @@ install(FILES nodelets.xml
 if (CATKIN_ENABLE_TESTING)
   add_subdirectory(tests)
 endif()
-

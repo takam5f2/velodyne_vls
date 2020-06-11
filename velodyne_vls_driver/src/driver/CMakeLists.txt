@@ -1,6 +1,6 @@
 # build the driver node
 add_executable(velodyne_node velodyne_node.cc driver.cc)
-add_dependencies(velodyne_node velodyne_driver_gencfg)
+add_dependencies(velodyne_node velodyne_vls_driver_gencfg)
 target_link_libraries(velodyne_node
   velodyne_input
   ${catkin_LIBRARIES}
@@ -9,7 +9,7 @@ target_link_libraries(velodyne_node
 
 # build the nodelet version
 add_library(driver_nodelet nodelet.cc driver.cc)
-add_dependencies(driver_nodelet velodyne_driver_gencfg)
+add_dependencies(driver_nodelet velodyne_vls_driver_gencfg)
 target_link_libraries(driver_nodelet
   velodyne_input
   ${catkin_LIBRARIES}

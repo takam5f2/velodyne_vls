@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/file.h>
-#include <velodyne_driver/input.h>
+#include <velodyne_vls_driver/input.h>
 
 namespace velodyne_driver
 {
@@ -70,10 +70,10 @@ namespace velodyne_driver
     Input(private_nh, port)
   {
     sockfd_ = -1;
-    
+
     if (!devip_str_.empty()) {
       inet_aton(devip_str_.c_str(),&devip_);
-    }    
+    }
 
     // connect to Velodyne UDP port
     ROS_INFO_STREAM("Opening UDP socket: port " << port);
@@ -83,19 +83,19 @@ namespace velodyne_driver
         perror("socket");               // TODO: ROS_ERROR errno
         return;
       }
-  
+
     sockaddr_in my_addr;                     // my address information
     memset(&my_addr, 0, sizeof(my_addr));    // initialize to zeros
     my_addr.sin_family = AF_INET;            // host byte order
     my_addr.sin_port = htons(port);          // port in network byte order
     my_addr.sin_addr.s_addr = INADDR_ANY;    // automatically fill in my IP
-  
+
     if (bind(sockfd_, (sockaddr *)&my_addr, sizeof(sockaddr)) == -1)
       {
         perror("bind");                 // TODO: ROS_ERROR errno
         return;
       }
-  
+
     if (fcntl(sockfd_,F_SETFL, O_NONBLOCK|FASYNC) < 0)
       {
         perror("non-block");
@@ -112,7 +112,7 @@ namespace velodyne_driver
   }
 
   void InputSocket::setPacketRate ( const double packet_rate)
-  { 
+  {
       return;
   }
 
@@ -230,7 +230,7 @@ namespace velodyne_driver
     packet_rate_(packet_rate),
     filename_(filename)
   {
-    pcap_ = NULL;  
+    pcap_ = NULL;
     empty_ = true;
 
     // get parameters using private node handle
@@ -272,9 +272,9 @@ namespace velodyne_driver
   }
 
   void InputPCAP::setPacketRate ( const double packet_rate)
-  { 
-    //packet_rate_(packet_rate); 
-    if(pwait_time != NULL) 
+  {
+    //packet_rate_(packet_rate);
+    if(pwait_time != NULL)
     {
       delete pwait_time ;
     }
@@ -293,9 +293,9 @@ namespace velodyne_driver
           {
             // Skip packets not for the correct port and from the
             // selected IP address.
-            if ( /* !devip_str_.empty() &&  Let the filter take care of skipping bad packets ... not dependent on device IP setting*/  
+            if ( /* !devip_str_.empty() &&  Let the filter take care of skipping bad packets ... not dependent on device IP setting*/
                 (0 == pcap_offline_filter(&pcap_packet_filter_,
-                                          header, pkt_data))) 
+                                          header, pkt_data)))
             {
               continue;
             }
@@ -305,10 +305,10 @@ namespace velodyne_driver
             {
               if(pwait_time == NULL) // use initial estimated wait from configs
                 packet_rate_.sleep();
-              else 
+              else
                 pwait_time->sleep();  // use auto rpm derived wait time
             }
-            
+
             memcpy(&pkt->data[0], pkt_data+42, packet_size);
             pkt->stamp = ros::Time::now(); // time_offset not considered here, as no synchronization required
             empty_ = false;
@@ -317,7 +317,7 @@ namespace velodyne_driver
 
         if (empty_)                 // no data in file?
           {
-            ROS_WARN("Error %d reading Velodyne packet: %s", 
+            ROS_WARN("Error %d reading Velodyne packet: %s",
                      res, pcap_geterr(pcap_));
             return -1;
           }
@@ -327,7 +327,7 @@ namespace velodyne_driver
             ROS_INFO("end of file reached -- done reading.");
             return -1;
           }
-        
+
         if (repeat_delay_ > 0.0)
           {
             ROS_INFO("end of file reached -- delaying %.3f seconds.",

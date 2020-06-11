@@ -9,7 +9,7 @@
 #include <boost/thread/lock_guard.hpp>
 
 #include <dynamic_reconfigure/server.h>
-#include <velodyne_laserscan/VelodyneLaserScanConfig.h>
+#include <velodyne_vls_laserscan/VelodyneLaserScanConfig.h>
 
 namespace velodyne_laserscan {
 

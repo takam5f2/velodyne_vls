@@ -1,7 +1,7 @@
 /* -*- mode: C++ -*- */
 /*
  *  Copyright (C) 2012 Austin Robot Technology, Jack O'Quin
- * 
+ *
  *  License: Modified BSD Software License Agreement
  *
  *  $Id$
@@ -21,8 +21,8 @@
 #include <diagnostic_updater/publisher.h>
 #include <dynamic_reconfigure/server.h>
 
-#include <velodyne_driver/input.h>
-#include <velodyne_driver/VelodyneNodeConfig.h>
+#include <velodyne_vls_driver/input.h>
+#include <velodyne_vls_driver/VelodyneNodeConfig.h>
 
 namespace velodyne_driver
 {
@@ -75,13 +75,13 @@ private:
   double   auto_alpha;
   uint32_t auto_npackets;
   double   auto_packet_rate;
-  uint8_t  curr_packet_rmode; //    [strongest return or farthest mode => Singular Retruns per firing]  
+  uint8_t  curr_packet_rmode; //    [strongest return or farthest mode => Singular Retruns per firing]
                               // or [Both  => Dual Retruns per fire]
   uint8_t  curr_packet_sensor_model; // extract the sensor id from packet
   double   slot_time ;
-  uint8_t  num_slots; 
+  uint8_t  num_slots;
   uint8_t  active_slots;
-  double   firing_cycle; 
+  double   firing_cycle;
   std::string dump_file; // string to hold pcap file name
 };
 
