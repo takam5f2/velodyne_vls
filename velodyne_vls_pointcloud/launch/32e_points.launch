@@ -18,15 +18,11 @@
   <arg name="read_once" default="false" />
   <arg name="repeat_delay" default="0.0" />
   <arg name="rpm" default="600.0" />
-  <arg name="cut_angle" default="-0.01" />
   <arg name="laserscan_ring" default="-1" />
   <arg name="laserscan_resolution" default="0.007" />
 
   <!-- start nodelet manager -->
-  <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" />
-
-  <!-- start nodelet manager -->
-  <include file="$(find velodyne_vls_driver)/launch/driver_nodelet.launch" if="$(arg launch_driver)">
+  <include file="$(find velodyne_vls_driver)/launch/nodelet_manager.launch" if="$(arg launch_driver)">
     <arg name="device_ip" value="$(arg device_ip)"/>
     <arg name="frame_id" value="$(arg frame_id)"/>
     <arg name="manager" value="$(arg manager)" />
@@ -37,7 +33,6 @@
     <arg name="read_once" value="$(arg read_once)"/>
     <arg name="repeat_delay" value="$(arg repeat_delay)"/>
     <arg name="rpm" value="$(arg rpm)"/>
-    <arg name="cut_angle" value="$(arg cut_angle)"/>
   </include>
 
   <!-- start cloud nodelet -->
