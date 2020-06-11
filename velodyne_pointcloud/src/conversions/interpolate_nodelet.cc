@@ -5,38 +5,34 @@
  *  $Id$
  */
 
-/** @file
-
-    This ROS nodelet converts raw Velodyne 3D LIDAR packets to a
-    PointCloud2.
-
-*/
-
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 
-#include "velodyne_pointcloud/convert.h"
+#include "velodyne_pointcloud/interpolate.h"
 
 namespace velodyne_pointcloud
 {
-class CloudNodelet : public nodelet::Nodelet
+class InterpolateNodelet : public nodelet::Nodelet
 {
 public:
-  CloudNodelet() {}
-  ~CloudNodelet() {}
+  InterpolateNodelet() {}
+  ~InterpolateNodelet() {}
 
 private:
   virtual void onInit();
-  boost::shared_ptr<Convert> conv_;
+  boost::shared_ptr<Interpolate> interpolate_;
 };
 
 /** @brief Nodelet initialization. */
-void CloudNodelet::onInit() { conv_.reset(new Convert(getNodeHandle(), getPrivateNodeHandle())); }
+void InterpolateNodelet::onInit()
+{
+  interpolate_.reset(new Interpolate(getNodeHandle(), getPrivateNodeHandle()));
+}
 
 }  // namespace velodyne_pointcloud
 
 // Register this plugin with pluginlib.  Names must match nodelets.xml.
 //
 // parameters: class type, base class type
-PLUGINLIB_EXPORT_CLASS(velodyne_pointcloud::CloudNodelet, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(velodyne_pointcloud::InterpolateNodelet, nodelet::Nodelet)
