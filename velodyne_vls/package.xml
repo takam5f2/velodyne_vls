@@ -14,10 +14,10 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <run_depend>velodyne_driver_vls</run_depend>
-  <run_depend>velodyne_laserscan_vls</run_depend>
+  <run_depend>velodyne_vls_driver</run_depend>
+  <run_depend>velodyne_vls_laserscan</run_depend>
   <run_depend>velodyne_msgs</run_depend>
-  <run_depend>velodyne_pointcloud_vls</run_depend>
+  <run_depend>velodyne_vls_pointcloud</run_depend>
 
   <export>
     <metapackage/>
