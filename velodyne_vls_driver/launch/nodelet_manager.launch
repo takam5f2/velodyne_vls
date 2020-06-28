@@ -14,7 +14,7 @@
   <arg name="read_once" default="false" />
   <arg name="repeat_delay" default="0.0" />
   <arg name="rpm" default="600.0" />
-  <arg name="auto_rpm_alpha" default="0.999" />
+  <arg name="sensor_phase" default="0.0" />
 
   <!-- start nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" />
@@ -32,7 +32,7 @@
     <param name="read_once" value="$(arg read_once)"/>
     <param name="repeat_delay" value="$(arg repeat_delay)"/>
     <param name="rpm" value="$(arg rpm)"/>
-    <param name="auto_rpm_alpha" value="$(arg auto_rpm_alpha)"/>
+    <param name="sensor_phase" value="$(arg sensor_phase)"/>
   </node>
 
 </launch>

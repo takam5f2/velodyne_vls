@@ -18,6 +18,7 @@
   <arg name="read_once" default="false" />
   <arg name="repeat_delay" default="0.0" />
   <arg name="rpm" default="600.0" />
+  <arg name="sensor_phase" default="0.0" />
   <arg name="laserscan_ring" default="-1" />
   <arg name="laserscan_resolution" default="0.007" />
   <arg name="num_points_threshold" default="300"/>
@@ -35,6 +36,7 @@
     <arg name="read_once" value="$(arg read_once)"/>
     <arg name="repeat_delay" value="$(arg repeat_delay)"/>
     <arg name="rpm" value="$(arg rpm)"/>
+    <arg name="sensor_phase" value="$(arg sensor_phase)"/>
   </include>
 
   <!-- start cloud nodelet -->
