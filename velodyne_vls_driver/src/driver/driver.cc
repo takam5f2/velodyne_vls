@@ -281,50 +281,37 @@ bool VelodyneDriver::poll(void)
   uint processed_packets = 0;
   while (use_next_packet)
   {
-      while (true)
+    while (true)
+    {
+        // keep reading until full packet received
+        velodyne_msgs::VelodynePacket new_packet;
+        scan->packets.push_back(new_packet);
+        int rc = input_->getPacket(&scan->packets.back(), config_.time_offset);
+        if (rc == 0) break;       // got a full packet?
+        if (rc < 0) return false; // end of file reached?
+    }
+    processed_packets++;
+
+    curr_packet_azm  = scan->packets.back().data[2]; // lower word of azimuth block 0
+    curr_packet_azm |= scan->packets.back().data[3] << 8; // higher word of azimuth block 0
+    curr_packet_rmode = scan->packets.back().data[1204];
+    curr_packet_sensor_model = scan->packets.back().data[1205];
+
+    // For correct pointcloud assembly, always stop the scan after passing the
+    // zero phase point. The pointcloud assembler will remedy this after unpacking
+    // the packets, by buffering the overshot azimuths for the next cloud.
+    if (processed_packets > 1)
+    {
+      uint16_t phase = (uint16_t)round(config_.sensor_phase*100);
+      uint16_t azimuth_gap = (36000 + curr_packet_azm - prev_packet_azm) % 36000;
+      uint16_t phased_azimuth_next = ((36000 + curr_packet_azm - phase) % 36000) + azimuth_gap;
+
+      if (phased_azimuth_next > 36000)
       {
-          // keep reading until full packet received
-          velodyne_msgs::VelodynePacket new_packet;
-          scan->packets.push_back(new_packet);
-          //int rc = input_->getPacket(&scan->packets[processed_packets], config_.time_offset);
-          int rc = input_->getPacket(&scan->packets.back(), config_.time_offset);
-          if (rc == 0) break;       // got a full packet?
-          if (rc < 0) return false; // end of file reached?
+        use_next_packet = false;
       }
-      processed_packets++;
-
-      curr_packet_azm  = scan->packets.back().data[2]; // lower word of azimuth block 0
-      curr_packet_azm |= scan->packets.back().data[3] << 8; // higher word of azimuth block 0
-      curr_packet_rmode = scan->packets.back().data[1204];
-      curr_packet_sensor_model = scan->packets.back().data[1205];
-
-      if (processed_packets > 1)
-      {
-        int phase = (int)round(config_.sensor_phase*100);
-        int phased_current_azimuth = (int)curr_packet_azm - phase;
-        int phased_previous_azimuth = (int)prev_packet_azm - phase;
-        if (phased_current_azimuth < 0)
-        {
-          phased_current_azimuth = 36000 + phased_current_azimuth;
-        }
-        if (phased_previous_azimuth < 0)
-        {
-          phased_previous_azimuth = 36000 + phased_previous_azimuth;
-        }
-
-        int azimuth_gap = phased_current_azimuth - phased_previous_azimuth;
-        int azimuth_next1 = phased_current_azimuth + azimuth_gap;
-        int azimuth_next2 = azimuth_next1 + azimuth_gap;
-
-        if (azimuth_next2 > 36000)
-        {
-          if ((azimuth_next2 - 36000) > abs((azimuth_next1 - 36000)))
-          {
-            use_next_packet = false;
-          }
-        }
-      }
-      prev_packet_azm = curr_packet_azm;
+    }
+    prev_packet_azm = curr_packet_azm;
   }
 
   // average the time stamp from first package and last package

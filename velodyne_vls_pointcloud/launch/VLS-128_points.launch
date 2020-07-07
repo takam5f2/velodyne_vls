@@ -36,7 +36,6 @@
     <arg name="read_once" value="$(arg read_once)"/>
     <arg name="repeat_delay" value="$(arg repeat_delay)"/>
     <arg name="rpm" value="$(arg rpm)"/>
-    <arg name="sensor_phase" value="$(arg sensor_phase)"/>
   </include>
 
   <!-- start cloud nodelet -->
@@ -47,6 +46,7 @@
     <arg name="min_range" value="$(arg min_range)"/>
     <arg name="num_points_threshold" value="$(arg num_points_threshold)"/>
     <arg name="invalid_intensity" value="$(arg invalid_intensity)"/>
+    <arg name="sensor_phase" value="$(arg sensor_phase)"/>
   </include>
 
   <!-- start laserscan nodelet -->

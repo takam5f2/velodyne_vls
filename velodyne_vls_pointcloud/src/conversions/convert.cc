@@ -33,7 +33,7 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh)
   num_points_threshold_(300),
   base_link_frame_("base_link")
 {
-  ROS_WARN("This node is debugged only VLP16 and VLP32C. Please dont use other models");
+  ROS_WARN("This node is only tested for VLP16, VLP32C, and VLS128. Use other models at your own risk.");
 
   data_->setup(private_nh);
 
@@ -73,6 +73,7 @@ void Convert::callback(velodyne_pointcloud::CloudNodeConfig & config, uint32_t l
   data_->setParameters(
     config.min_range, config.max_range, config.view_direction, config.view_width);
   num_points_threshold_ = config.num_points_threshold;
+  config_.sensor_phase = config.sensor_phase;
 
   YAML::Node invalid_intensity_yaml = YAML::Load(config.invalid_intensity);
   invalid_intensity_array_ = std::vector<float>(data_->getNumLasers(), 0);
@@ -90,13 +91,39 @@ void Convert::processScan(const velodyne_msgs::VelodyneScan::ConstPtr & scanMsg)
     velodyne_points_ex_pub_.getNumSubscribers() > 0 ||
     velodyne_points_invalid_near_pub_.getNumSubscribers() > 0 ||
     velodyne_points_combined_ex_pub_.getNumSubscribers() > 0) {
-    scan_points_xyziradt.pc->points.reserve(scanMsg->packets.size() * data_->scansPerPacket());
+    scan_points_xyziradt.pc->points.reserve(scanMsg->packets.size() * data_->scansPerPacket() + _overflow_buffer.pc->points.size());
+
+    // Add the overflow buffer points
+    for (size_t i = _overflow_buffer.pc->points.size(); i > 0; --i) {
+      scan_points_xyziradt.pc->points.push_back(_overflow_buffer.pc->points[i-1]);
+    }
+    // Reset overflow buffer
+    _overflow_buffer.pc->points.clear();
+    _overflow_buffer.pc->width = 0;
+    _overflow_buffer.pc->height = 1;
+
     for (size_t i = 0; i < scanMsg->packets.size(); ++i) {
       data_->unpack(scanMsg->packets[i], scan_points_xyziradt);
     }
+    // Remove overflow points and add to overflow buffer for next scan
+    int phase = (uint16_t)round(config_.sensor_phase*100);
+    if (scan_points_xyziradt.pc->points.size() > 0)
+    {
+      uint16_t current_azimuth = (int)scan_points_xyziradt.pc->points.back().azimuth;
+      uint16_t phase_diff = (36000 + current_azimuth - phase) % 36000;
+      while (phase_diff < 18000 && scan_points_xyziradt.pc->points.size() > 0)
+      {
+        _overflow_buffer.pc->points.push_back(scan_points_xyziradt.pc->points.back());
+        scan_points_xyziradt.pc->points.pop_back();
+        current_azimuth = (int)scan_points_xyziradt.pc->points.back().azimuth;
+        phase_diff = (36000 + current_azimuth - phase) % 36000;
+      }
+      _overflow_buffer.pc->width = _overflow_buffer.pc->points.size();
+    }
+
     scan_points_xyziradt.pc->header = pcl_conversions::toPCL(scanMsg->header);
     scan_points_xyziradt.pc->header.stamp =
-      pcl_conversions::toPCL(scanMsg->packets[0].stamp - ros::Duration(0.0));
+      pcl_conversions::toPCL(scanMsg->packets[0].stamp - ros::Duration(0.0));  // CHANGE THIS LATER
     scan_points_xyziradt.pc->height = 1;
     scan_points_xyziradt.pc->width = scan_points_xyziradt.pc->points.size();
   }

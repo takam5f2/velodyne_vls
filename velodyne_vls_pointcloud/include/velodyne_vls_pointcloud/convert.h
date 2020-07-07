@@ -62,6 +62,8 @@ private:
   tf2_ros::Buffer tf2_buffer_;
   tf2_ros::TransformListener tf2_listener_;
 
+  // Buffer for overflow points
+  velodyne_pointcloud::PointcloudXYZIRADT _overflow_buffer;
   /// Pointer to dynamic reconfigure service srv_
   boost::shared_ptr<dynamic_reconfigure::Server<velodyne_pointcloud::CloudNodeConfig> > srv_;
 
@@ -74,7 +76,8 @@ private:
   /// configuration parameters
   typedef struct
   {
-    int npackets;  ///< number of packets to combine
+    int npackets;         ///< number of packets to combine
+    double sensor_phase;  ///< sensor phase (degrees)
   } Config;
   Config config_;
 };
