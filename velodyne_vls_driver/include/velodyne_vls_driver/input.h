@@ -68,6 +68,7 @@ namespace velodyne_driver
     ros::NodeHandle private_nh_;
     uint16_t port_;
     std::string devip_str_;
+    bool sensor_timestamp_;
   };
 
   /** @brief Live Velodyne input from socket. */
@@ -78,7 +79,7 @@ namespace velodyne_driver
                 uint16_t port = DATA_PORT_NUMBER);
     virtual ~InputSocket();
 
-    virtual int getPacket(velodyne_msgs::VelodynePacket *pkt, 
+    virtual int getPacket(velodyne_msgs::VelodynePacket *pkt,
                           const double time_offset);
 
     void setDeviceIP( const std::string& ip );
@@ -107,7 +108,7 @@ namespace velodyne_driver
               double repeat_delay=0.0);
     virtual ~InputPCAP();
 
-    virtual int getPacket(velodyne_msgs::VelodynePacket *pkt, 
+    virtual int getPacket(velodyne_msgs::VelodynePacket *pkt,
                           const double time_offset);
     void setDeviceIP( const std::string& ip );
     void setPacketRate( const double packet_rate ); // necessary for automatic adjustment of rpm

@@ -52,18 +52,6 @@ namespace velodyne_driver
       return value;
   }
 
-  inline   double computeTimeStamp(velodyne_msgs::VelodyneScanPtr scan, int index){
-
-      std::string digit4 = toBinary(scan->packets[index].data[1203]);
-      std::string digit3 = toBinary(scan->packets[index].data[1202]);
-      std::string digit2 = toBinary(scan->packets[index].data[1201]);
-      std::string digit1 = toBinary(scan->packets[index].data[1200]);
-      std::string digit = digit4 + digit3 + digit2 + digit1; // string concatenation
-      double value = convertBinaryToDecimal(digit);
-      // compute the seconds from the beginning of that hour to when the data being captured
-      double time_stamp = (double)value / 1000000;
-      return time_stamp;
-  }
 
 /** Utility function for Velodyne Driver
  *  gets the number of laser beams fired concurrently
@@ -315,18 +303,14 @@ bool VelodyneDriver::poll(void)
   }
 
   // average the time stamp from first package and last package
-  double firstTimeStamp = computeTimeStamp(scan, 0);
-  double lastTimeStamp = computeTimeStamp(scan, processed_packets - 1);
-  double meanTimeStamp = (firstTimeStamp + lastTimeStamp)/2;
+  ros::Time firstTimeStamp = scan->packets.front().stamp;
+  ros::Time lastTimeStamp = scan->packets.back().stamp;
+  ros::Time  meanTimeStamp = firstTimeStamp + (lastTimeStamp - firstTimeStamp) * 0.5;
 
-  time_t seconds;
-  seconds = time (NULL);
-  int gpsSeconds = ((int)(seconds/3600)) * 3600 + floor(meanTimeStamp);
-  int nanSecs =  (meanTimeStamp - floor(meanTimeStamp)) * pow(10,9);
-  scan->header.stamp = ros::Time(gpsSeconds, nanSecs);
-  // std::cerr<< scan->header.stamp << std::endl;
-  // publish message using time of last packet read
+  // publish message using time of first packet read
   ROS_DEBUG("Publishing a full Velodyne scan.");
+  scan->header.stamp = scan->packets.front().stamp;
+  // scan->scan->header.stamp = scan->packets[scan->packets.size()/2].stamp;
   scan->header.frame_id = config_.frame_id;
   output_.publish(scan);
   // notify diagnostics that a message has been published, updating
@@ -336,12 +320,7 @@ bool VelodyneDriver::poll(void)
 
   if (dump_file != "")                  // have PCAP file?
   {
-    // determine packet rate over the scan
-    if (lastTimeStamp < firstTimeStamp)
-    {
-      lastTimeStamp = lastTimeStamp + 3600;
-    }
-    double scan_packet_rate = (processed_packets - 1)/(lastTimeStamp - firstTimeStamp);
+    double scan_packet_rate = (double)(processed_packets - 1)/(lastTimeStamp - firstTimeStamp).toSec();
     input_->setPacketRate(scan_packet_rate);
   }
   return true;

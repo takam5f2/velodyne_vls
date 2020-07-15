@@ -122,8 +122,14 @@ void Convert::processScan(const velodyne_msgs::VelodyneScan::ConstPtr & scanMsg)
     }
 
     scan_points_xyziradt.pc->header = pcl_conversions::toPCL(scanMsg->header);
+    
+    // Find timestamp from first/last point (and maybe average)?
+    double first_point_timestamp = scan_points_xyziradt.pc->points.front().time_stamp;
+    double last_point_timestamp = scan_points_xyziradt.pc->points.back().time_stamp;
+    double average_timestamp = (first_point_timestamp + last_point_timestamp)/2;
     scan_points_xyziradt.pc->header.stamp =
-      pcl_conversions::toPCL(scanMsg->packets[0].stamp - ros::Duration(0.0));  // CHANGE THIS LATER
+      pcl_conversions::toPCL(ros::Time(first_point_timestamp) - ros::Duration(0.0));
+      //pcl_conversions::toPCL(scanMsg->packets[0].stamp - ros::Duration(0.0));
     scan_points_xyziradt.pc->height = 1;
     scan_points_xyziradt.pc->width = scan_points_xyziradt.pc->points.size();
   }

@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <sys/file.h>
 #include <velodyne_vls_driver/input.h>
+#include <velodyne_vls_driver/time_conversion.hpp>
 
 namespace velodyne_driver
 {
@@ -52,6 +53,7 @@ namespace velodyne_driver
     port_(port)
   {
     private_nh.param("device_ip", devip_str_, std::string(""));
+    private_nh.param("sensor_timestamp", sensor_timestamp_, false);
     if (!devip_str_.empty())
       ROS_INFO_STREAM("Only accepting packets from IP address: "
                       << devip_str_);
@@ -204,10 +206,15 @@ namespace velodyne_driver
                          << nbytes << " bytes");
       }
 
-    // Average the times at which we begin and end reading.  Use that to
-    // estimate when the scan occurred. Add the time offset.
-    double time2 = ros::Time::now().toSec();
-    pkt->stamp = ros::Time((time2 + time1) / 2.0 + time_offset);
+      if (!sensor_timestamp_) {
+        // Packet stamp from when read began. Add the time offset.
+        pkt->stamp = ros::Time(time1 + time_offset);
+      } else {
+        // Time for each packet is a 4 byte uint located starting at offset 1200 in
+        // the data packet
+        pkt->stamp = rosTimeFromGpsTimestamp(&(pkt->data[1200]));
+      }
+
 
     return 0;
   }
@@ -310,7 +317,7 @@ namespace velodyne_driver
             }
 
             memcpy(&pkt->data[0], pkt_data+42, packet_size);
-            pkt->stamp = ros::Time::now(); // time_offset not considered here, as no synchronization required
+            pkt->stamp = rosTimeFromGpsTimestamp(&(pkt->data[1200])); // time_offset not considered here, as no synchronization required
             empty_ = false;
             return 0;                   // success
           }
