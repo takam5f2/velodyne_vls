@@ -37,6 +37,8 @@
     <arg name="read_once" value="$(arg read_once)"/>
     <arg name="repeat_delay" value="$(arg repeat_delay)"/>
     <arg name="rpm" value="$(arg rpm)"/>
+    <arg name="sensor_phase" value="$(arg sensor_phase)"/>
+    <arg name="sensor_timestamp" value="$(arg sensor_timestamp)" />
   </include>
 
   <!-- start cloud nodelet -->
