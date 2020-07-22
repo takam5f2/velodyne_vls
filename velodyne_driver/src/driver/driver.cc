@@ -294,7 +294,7 @@ bool VelodyneDriver::poll(void)
       uint16_t azimuth_gap = (36000 + curr_packet_azm - prev_packet_azm) % 36000;
       uint16_t phased_azimuth_next = ((36000 + curr_packet_azm - phase) % 36000) + azimuth_gap;
 
-      if (phased_azimuth_next >= 36000)
+      if (phased_azimuth_next >= 36000 || phased_azimuth_next <= azimuth_gap)
       {
         use_next_packet = false;
       }
