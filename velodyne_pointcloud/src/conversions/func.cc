@@ -171,8 +171,8 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
     return output_pointcloud;
   }
 
-  double theta = 0;
-  double x = 0, y = 0;
+  float theta = 0;
+  float x = 0, y = 0;
 
   auto twist_it = std::lower_bound(
     std::begin(twist_queue), std::end(twist_queue),
@@ -180,14 +180,15 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
     [](const geometry_msgs::TwistStamped & x, ros::Time t) { return x.header.stamp < t; });
   twist_it = twist_it == std::end(twist_queue) ? std::end(twist_queue) - 1 : twist_it;
 
+  const tf2::Transform tf2_base_link_to_sensor_inv = tf2_base_link_to_sensor.inverse();
   for (const auto & p : input_pointcloud->points) {
     for (; (twist_it != std::end(twist_queue) - 1 && p.time_stamp > twist_it->header.stamp.toSec());
          ++twist_it) {
       // std::cout << std::fixed << p.time_stamp << " " << twist_it->header.stamp.toSec() << std::endl;
     }
 
-    double v = twist_it->twist.linear.x;
-    double w = twist_it->twist.angular.z;
+    float v = twist_it->twist.linear.x;
+    float w = twist_it->twist.angular.z;
 
     if (std::fabs(p.time_stamp - twist_it->header.stamp.toSec()) > 0.1) {
       ROS_WARN_STREAM_THROTTLE(10, "Twist time_stamp is too late. Cloud not interpolate.");
@@ -196,19 +197,19 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
     }
 
     static double prev_time_stamp = p.time_stamp;
-    const double time_offset = p.time_stamp - prev_time_stamp;
+    const float time_offset = static_cast<float>(p.time_stamp - prev_time_stamp);
 
     tf2::Vector3 sensorTF_point(p.x, p.y, p.z);
 
     tf2::Vector3 base_linkTF_point;
-    base_linkTF_point = tf2_base_link_to_sensor.inverse() * sensorTF_point;
+    base_linkTF_point = tf2_base_link_to_sensor_inv * sensorTF_point;
 
-      theta += w * time_offset;
-      tf2::Quaternion baselink_quat;
-      baselink_quat.setRPY(0.0, 0.0, theta);
-      double dis = v * time_offset;
-      x += dis * std::cos(theta);
-      y += dis * std::sin(theta);
+    theta += w * time_offset;
+    tf2::Quaternion baselink_quat;
+    baselink_quat.setRPY(0.0, 0.0, theta);
+    const float dis = v * time_offset;
+    x += dis * std::cos(theta);
+    y += dis * std::sin(theta);
 
     tf2::Transform baselinkTF_odom;
     baselinkTF_odom.setOrigin(tf2::Vector3(x, y, 0));
