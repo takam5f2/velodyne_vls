@@ -196,8 +196,8 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
       w = 0;
     }
 
-    static float prev_time_stamp = p.time_stamp;
-    const float time_offset = p.time_stamp - prev_time_stamp;
+    static double prev_time_stamp = p.time_stamp;
+    const float time_offset = static_cast<float>(p.time_stamp - prev_time_stamp);
 
     tf2::Vector3 sensorTF_point(p.x, p.y, p.z);
 
