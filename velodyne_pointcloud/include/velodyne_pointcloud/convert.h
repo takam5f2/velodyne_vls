@@ -77,7 +77,7 @@ private:
   typedef struct
   {
     int npackets;               ///< number of packets to combine
-    double sensor_phase;        ///< sensor phase (degrees)
+    double scan_phase;        ///< sensor phase (degrees)
     bool sensor_timestamp;      ///< flag on whether to use sensor (GPS) time or ROS receive time
   } Config;
   Config config_;

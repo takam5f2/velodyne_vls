@@ -204,9 +204,9 @@ VelodyneDriver::VelodyneDriver(ros::NodeHandle node,
   ROS_INFO_STREAM(deviceName << " rotating at " << config_.rpm << " RPM");
   double frequency = (config_.rpm / 60.0);     // expected Hz rate
 
-  private_nh.param("sensor_phase", config_.sensor_phase, 0.0);
-  private_nh.getParam("sensor_phase", config_.sensor_phase);
-  ROS_INFO_STREAM("Scan will align to sensor phase set to " << config_.sensor_phase  << " degrees");
+  private_nh.param("scan_phase", config_.scan_phase, 0.0);
+  private_nh.getParam("scan_phase", config_.scan_phase);
+  ROS_INFO_STREAM("Scan start/end will be at a phase of " << config_.scan_phase  << " degrees");
 
   private_nh.param("pcap", dump_file, std::string(""));
 
@@ -290,7 +290,7 @@ bool VelodyneDriver::poll(void)
     // the packets, by buffering the overshot azimuths for the next cloud.
     if (processed_packets > 1)
     {
-      uint16_t phase = (uint16_t)round(config_.sensor_phase*100);
+      uint16_t phase = (uint16_t)round(config_.scan_phase*100);
       uint16_t azimuth_gap = (36000 + curr_packet_azm - prev_packet_azm) % 36000;
       uint16_t phased_azimuth_next = ((36000 + curr_packet_azm - phase) % 36000) + azimuth_gap;
 
@@ -331,7 +331,7 @@ void VelodyneDriver::callback(velodyne_driver::VelodyneNodeConfig &config,
 {
   ROS_INFO("Reconfigure Request");
   config_.time_offset = config.time_offset;
-  config_.sensor_phase = config.sensor_phase;
+  config_.scan_phase = config.scan_phase;
 }
 
 } // namespace velodyne_driver
