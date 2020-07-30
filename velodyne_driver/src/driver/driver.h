@@ -54,7 +54,7 @@ private:
     std::string frame_id;            ///< tf frame ID
     std::string model;               ///< device model name
     double rpm;                      ///< device rotation rate (RPMs)
-    double sensor_phase;             ///< sensor phase (degrees)
+    double scan_phase;               ///< scan phase (degrees)
     double time_offset;              ///< time in seconds added to each velodyne time stamp
   } config_;
 

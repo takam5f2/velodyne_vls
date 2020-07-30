@@ -18,7 +18,7 @@
   <arg name="read_once" default="false" />
   <arg name="repeat_delay" default="0.0" />
   <arg name="rpm" default="600.0" />
-  <arg name="sensor_phase" default="0.0" />
+  <arg name="scan_phase" default="0.0" />
   <arg name="sensor_timestamp" default="false" />
   <arg name="laserscan_ring" default="-1" />
   <arg name="laserscan_resolution" default="0.007" />
@@ -37,7 +37,7 @@
     <arg name="read_once" value="$(arg read_once)"/>
     <arg name="repeat_delay" value="$(arg repeat_delay)"/>
     <arg name="rpm" value="$(arg rpm)"/>
-    <arg name="sensor_phase" value="$(arg sensor_phase)"/>
+    <arg name="scan_phase" value="$(arg scan_phase)"/>
     <arg name="sensor_timestamp" value="$(arg sensor_timestamp)" />
   </include>
 
@@ -49,7 +49,7 @@
     <arg name="min_range" value="$(arg min_range)"/>
     <arg name="num_points_threshold" value="$(arg num_points_threshold)"/>
     <arg name="invalid_intensity" value="$(arg invalid_intensity)"/>
-    <arg name="sensor_phase" value="$(arg sensor_phase)"/>
+    <arg name="scan_phase" value="$(arg scan_phase)"/>
   </include>
 
   <!-- start laserscan nodelet -->

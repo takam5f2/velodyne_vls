@@ -73,7 +73,7 @@ void Convert::callback(velodyne_pointcloud::CloudNodeConfig & config, uint32_t l
   data_->setParameters(
     config.min_range, config.max_range, config.view_direction, config.view_width);
   num_points_threshold_ = config.num_points_threshold;
-  config_.sensor_phase = config.sensor_phase;
+  config_.scan_phase = config.scan_phase;
 
   YAML::Node invalid_intensity_yaml = YAML::Load(config.invalid_intensity);
   invalid_intensity_array_ = std::vector<float>(data_->getNumLasers(), 0);
@@ -106,7 +106,7 @@ void Convert::processScan(const velodyne_msgs::VelodyneScan::ConstPtr & scanMsg)
       data_->unpack(scanMsg->packets[i], scan_points_xyziradt);
     }
     // Remove overflow points and add to overflow buffer for next scan
-    int phase = (uint16_t)round(config_.sensor_phase*100);
+    int phase = (uint16_t)round(config_.scan_phase*100);
     if (scan_points_xyziradt.pc->points.size() > 0)
     {
       uint16_t current_azimuth = (int)scan_points_xyziradt.pc->points.back().azimuth;
@@ -122,7 +122,7 @@ void Convert::processScan(const velodyne_msgs::VelodyneScan::ConstPtr & scanMsg)
     }
 
     scan_points_xyziradt.pc->header = pcl_conversions::toPCL(scanMsg->header);
-    
+
     // Find timestamp from first/last point (and maybe average)?
     double first_point_timestamp = scan_points_xyziradt.pc->points.front().time_stamp;
     double last_point_timestamp = scan_points_xyziradt.pc->points.back().time_stamp;
