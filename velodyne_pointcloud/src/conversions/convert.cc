@@ -33,9 +33,15 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh)
   num_points_threshold_(300),
   base_link_frame_("base_link")
 {
-  ROS_WARN("This node is only tested for VLP16, VLP32C, and VLS128. Use other models at your own risk.");
-
   data_->setup(private_nh);
+  // check if unsupported models are used.
+  const size_t num_lasers = data_->getNumLasers();
+  switch (num_lasers) {
+  case 16: case 32: case 128: // VLP16, VLP32C, and VLS128 are supported.
+    break;
+  default:
+    ROS_WARN("This node is only tested for VLP16, VLP32C, and VLS128. Use other models at your own risk.");
+  }
 
   private_nh.getParam("num_points_threshold", num_points_threshold_);
 
