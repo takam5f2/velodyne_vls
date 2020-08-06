@@ -67,11 +67,9 @@ private:
   double diag_max_freq_;
   boost::shared_ptr<diagnostic_updater::TopicDiagnostic> diag_topic_;
 
-  uint16_t prev_packet_azm;
-  uint16_t curr_packet_azm;
-  uint8_t  curr_packet_rmode; //    [strongest return or farthest mode => Singular Retruns per firing]
+  // uint8_t  curr_packet_rmode; //    [strongest return or farthest mode => Singular Retruns per firing]
                               // or [Both  => Dual Retruns per fire]
-  uint8_t  curr_packet_sensor_model; // extract the sensor id from packet
+  // uint8_t  curr_packet_sensor_model; // extract the sensor id from packet
   std::string dump_file; // string to hold pcap file name
 };
 

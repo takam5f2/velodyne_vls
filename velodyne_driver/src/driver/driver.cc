@@ -265,6 +265,12 @@ bool VelodyneDriver::poll(void)
 
   // Since the velodyne delivers data at a very high rate, keep
   // reading and publishing scans as fast as possible.
+  uint16_t curr_packet_azm = 0;
+  uint16_t prev_packet_phased_azm = 0;
+  uint16_t curr_packet_phased_azm = 0;
+  uint16_t phased_azimuth_next = 0;
+  uint16_t azimuth_gap = 0;
+  uint16_t phase = (uint16_t)round(config_.scan_phase*100);
   bool use_next_packet = true;
   uint processed_packets = 0;
   while (use_next_packet)
@@ -280,26 +286,27 @@ bool VelodyneDriver::poll(void)
     }
     processed_packets++;
 
+    // uint8_t  curr_packet_rmode;
     curr_packet_azm  = scan->packets.back().data[2]; // lower word of azimuth block 0
     curr_packet_azm |= scan->packets.back().data[3] << 8; // higher word of azimuth block 0
-    curr_packet_rmode = scan->packets.back().data[1204];
-    curr_packet_sensor_model = scan->packets.back().data[1205];
+    // curr_packet_rmode = scan->packets.back().data[1204];
+    // curr_packet_sensor_model = scan->packets.back().data[1205];
 
     // For correct pointcloud assembly, always stop the scan after passing the
     // zero phase point. The pointcloud assembler will remedy this after unpacking
     // the packets, by buffering the overshot azimuths for the next cloud.
+    curr_packet_phased_azm = (36000 + curr_packet_azm - phase) % 36000;
     if (processed_packets > 1)
     {
-      uint16_t phase = (uint16_t)round(config_.scan_phase*100);
-      uint16_t azimuth_gap = (36000 + curr_packet_azm - prev_packet_azm) % 36000;
-      uint16_t phased_azimuth_next = ((36000 + curr_packet_azm - phase) % 36000) + azimuth_gap;
+      azimuth_gap = (36000 + curr_packet_phased_azm - prev_packet_phased_azm) % 36000;
+      phased_azimuth_next = curr_packet_phased_azm + azimuth_gap;
 
-      if (phased_azimuth_next >= 36000 || phased_azimuth_next <= azimuth_gap)
+      if (phased_azimuth_next > 36000 || prev_packet_phased_azm > curr_packet_phased_azm)
       {
         use_next_packet = false;
       }
     }
-    prev_packet_azm = curr_packet_azm;
+    prev_packet_phased_azm = curr_packet_phased_azm;
   }
 
   // average the time stamp from first package and last package
@@ -318,7 +325,7 @@ bool VelodyneDriver::poll(void)
   diag_topic_->tick(scan->header.stamp);
   diagnostics_.update();
 
-  if (dump_file != "")                  // have PCAP file?
+  if (dump_file != "" && processed_packets > 1)                  // have PCAP file?
   {
     double scan_packet_rate = (double)(processed_packets - 1)/(lastTimeStamp - firstTimeStamp).toSec();
     input_->setPacketRate(scan_packet_rate);
