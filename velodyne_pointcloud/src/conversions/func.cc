@@ -227,8 +227,8 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
     // base_linkTF_trans_point = baselinkTF_odom * sensorTF_point;
 
     tf2::Vector3 base_linkTF_trans_point(
-       base_linkTF_point.getX()*tmp_cos - base_linkTF_point.getX()*tmp_sin + x
-     , base_linkTF_point.getY()*tmp_sin + base_linkTF_point.getY()*tmp_cos + y
+       base_linkTF_point.getX()*tmp_cos - base_linkTF_point.getY()*tmp_sin + x
+     , base_linkTF_point.getX()*tmp_sin + base_linkTF_point.getY()*tmp_cos + y
      , base_linkTF_point.getZ());
 
 
