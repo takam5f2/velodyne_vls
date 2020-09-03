@@ -202,24 +202,43 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
     tf2::Vector3 sensorTF_point(p.x, p.y, p.z);
 
     tf2::Vector3 base_linkTF_point;
-    base_linkTF_point = tf2_base_link_to_sensor_inv * sensorTF_point;
+    if(tf2_base_link_to_sensor_inv.getOrigin().isZero() && tf2_base_link_to_sensor_inv.getRotation().getW() == 1.0) {
+      base_linkTF_point = sensorTF_point;
+    }
+    else {
+      base_linkTF_point = tf2_base_link_to_sensor_inv * sensorTF_point;
+    }
 
     theta += w * time_offset;
-    tf2::Quaternion baselink_quat;
-    baselink_quat.setRPY(0.0, 0.0, theta);
     const float dis = v * time_offset;
-    x += dis * std::cos(theta);
-    y += dis * std::sin(theta);
+    float tmp_cos = std::cos(theta);
+    float tmp_sin = std::sin(theta);
+    x += dis * tmp_cos;
+    y += dis * tmp_sin;
 
-    tf2::Transform baselinkTF_odom;
-    baselinkTF_odom.setOrigin(tf2::Vector3(x, y, 0));
-    baselinkTF_odom.setRotation(baselink_quat);
+    // tf2::Quaternion baselink_quat;
+    // baselink_quat.setRPY(0.0, 0.0, theta);
 
-    tf2::Vector3 base_linkTF_trans_point;
-    base_linkTF_trans_point = baselinkTF_odom * base_linkTF_point;
+    // tf2::Transform baselinkTF_odom;
+    // baselinkTF_odom.setOrigin(tf2::Vector3(x, y, 0));
+    // baselinkTF_odom.setRotation(baselink_quat);
+    //
+    // tf2::Vector3 base_linkTF_trans_point;
+    // base_linkTF_trans_point = baselinkTF_odom * sensorTF_point;
+
+    tf2::Vector3 base_linkTF_trans_point(
+       base_linkTF_point.getX()*tmp_cos - base_linkTF_point.getX()*tmp_sin + x
+     , base_linkTF_point.getY()*tmp_sin + base_linkTF_point.getY()*tmp_cos + y
+     , base_linkTF_point.getZ());
+
 
     tf2::Vector3 sensorTF_trans_point;
-    sensorTF_trans_point = tf2_base_link_to_sensor * base_linkTF_trans_point;
+    if(tf2_base_link_to_sensor.getOrigin().isZero() && tf2_base_link_to_sensor.getRotation().getW() == 1.0) {
+      sensorTF_trans_point = base_linkTF_trans_point;
+    }
+    else {
+      sensorTF_trans_point = tf2_base_link_to_sensor * base_linkTF_trans_point;
+    }
 
     velodyne_pointcloud::PointXYZIRADT tmp_p;
     tmp_p.x = sensorTF_trans_point.getX();
