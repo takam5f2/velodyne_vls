@@ -265,11 +265,12 @@ bool VelodyneDriver::poll(void)
 
   // Since the velodyne delivers data at a very high rate, keep
   // reading and publishing scans as fast as possible.
-  uint16_t curr_packet_azm = 0;
-  uint16_t prev_packet_phased_azm = 0;
-  uint16_t curr_packet_phased_azm = 0;
-  uint16_t phased_azimuth_next = 0;
-  uint16_t azimuth_gap = 0;
+  uint16_t packet_first_azm = 0;
+  uint16_t packet_first_azm_phased = 0;
+  uint16_t packet_last_azm = 0;
+  uint16_t packet_last_azm_phased = 0;
+  uint16_t prev_packet_first_azm_phased = 0;
+
   uint16_t phase = (uint16_t)round(config_.scan_phase*100);
   bool use_next_packet = true;
   uint processed_packets = 0;
@@ -287,26 +288,29 @@ bool VelodyneDriver::poll(void)
     processed_packets++;
 
     // uint8_t  curr_packet_rmode;
-    curr_packet_azm  = scan->packets.back().data[2]; // lower word of azimuth block 0
-    curr_packet_azm |= scan->packets.back().data[3] << 8; // higher word of azimuth block 0
+    packet_first_azm  = scan->packets.back().data[2]; // lower word of azimuth block 0
+    packet_first_azm |= scan->packets.back().data[3] << 8; // higher word of azimuth block 0
+
+    packet_last_azm = scan->packets.back().data[1102];
+    packet_last_azm |= scan->packets.back().data[1103] << 8;
+
     // curr_packet_rmode = scan->packets.back().data[1204];
     // curr_packet_sensor_model = scan->packets.back().data[1205];
 
     // For correct pointcloud assembly, always stop the scan after passing the
     // zero phase point. The pointcloud assembler will remedy this after unpacking
     // the packets, by buffering the overshot azimuths for the next cloud.
-    curr_packet_phased_azm = (36000 + curr_packet_azm - phase) % 36000;
+    packet_first_azm_phased = (36000 + packet_first_azm - phase) % 36000;
+    packet_last_azm_phased = (36000 + packet_last_azm - phase) % 36000;
     if (processed_packets > 1)
     {
-      azimuth_gap = (36000 + curr_packet_phased_azm - prev_packet_phased_azm) % 36000;
-      phased_azimuth_next = curr_packet_phased_azm + azimuth_gap;
-
-      if (phased_azimuth_next > 36000 || prev_packet_phased_azm > curr_packet_phased_azm)
+      if (packet_last_azm_phased < packet_first_azm_phased || packet_first_azm_phased < prev_packet_first_azm_phased)
       {
         use_next_packet = false;
+        std::cerr << processed_packets << ", " << packet_first_azm << ", " << packet_last_azm << std::endl;
       }
     }
-    prev_packet_phased_azm = curr_packet_phased_azm;
+    prev_packet_first_azm_phased = packet_first_azm_phased;
   }
 
   // average the time stamp from first package and last package
