@@ -307,7 +307,6 @@ bool VelodyneDriver::poll(void)
       if (packet_last_azm_phased < packet_first_azm_phased || packet_first_azm_phased < prev_packet_first_azm_phased)
       {
         use_next_packet = false;
-        std::cerr << processed_packets << ", " << packet_first_azm << ", " << packet_last_azm << std::endl;
       }
     }
     prev_packet_first_azm_phased = packet_first_azm_phased;
