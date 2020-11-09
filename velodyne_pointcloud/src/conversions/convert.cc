@@ -33,7 +33,7 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh)
   num_points_threshold_(300),
   base_link_frame_("base_link")
 {
-  ROS_WARN("This node is only tested for VLP16, VLP32C, and VLS128. Use other models at your own risk.");
+  ROS_INFO("This node is only tested for VLP16, VLP32C, and VLS128. Use other models at your own risk.");
 
   data_->setup(private_nh);
 
