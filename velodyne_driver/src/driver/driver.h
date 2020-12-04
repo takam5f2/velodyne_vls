@@ -17,13 +17,12 @@
 #define _VELODYNE_DRIVER_H_ 1
 
 #include <string>
-#include <ros/ros.h>
-#include <diagnostic_updater/diagnostic_updater.h>
-#include <diagnostic_updater/publisher.h>
-#include <dynamic_reconfigure/server.h>
+#include <rclcpp/rclcpp.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
+#include <velodyne_msgs/msg/velodyne_scan.hpp>
 
 #include <velodyne_driver/input.h>
-#include <velodyne_driver/VelodyneNodeConfig.h>
 
 namespace velodyne_driver
 {
@@ -32,21 +31,21 @@ class VelodyneDriver
 {
 public:
 
-  VelodyneDriver(ros::NodeHandle node,
-                 ros::NodeHandle private_nh);
+  VelodyneDriver(rclcpp::Node * node_ptr);
   ~VelodyneDriver() {}
 
   bool poll(void);
 
 private:
 
-  ///Callback for dynamic reconfigure
-  void callback(velodyne_driver::VelodyneNodeConfig &config,
-              uint32_t level);
+  // opinter to node for loggers and clocks
+  rclcpp::Node * node_ptr_;
 
-  ///Pointer to dynamic reconfigure service srv_
-  boost::shared_ptr<dynamic_reconfigure::Server<velodyne_driver::
-              VelodyneNodeConfig> > srv_;
+  ///Callback for parameter service
+  rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+
+  ///Pointer to parameter update service
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   // configuration parameters
   struct
@@ -58,14 +57,14 @@ private:
     double time_offset;              ///< time in seconds added to each velodyne time stamp
   } config_;
 
-  boost::shared_ptr<Input> input_;
-  ros::Publisher output_;
+  std::shared_ptr<Input> input_;
+  rclcpp::Publisher<velodyne_msgs::msg::VelodyneScan>::SharedPtr output_;
 
   /** diagnostics updater */
   diagnostic_updater::Updater diagnostics_;
   double diag_min_freq_;
   double diag_max_freq_;
-  boost::shared_ptr<diagnostic_updater::TopicDiagnostic> diag_topic_;
+  std::shared_ptr<diagnostic_updater::TopicDiagnostic> diag_topic_;
 
   // uint8_t  curr_packet_rmode; //    [strongest return or farthest mode => Singular Retruns per firing]
                               // or [Both  => Dual Retruns per fire]

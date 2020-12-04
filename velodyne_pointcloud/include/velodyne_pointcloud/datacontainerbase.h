@@ -17,7 +17,7 @@
 #ifndef __DATACONTAINERBASE_H
 #define __DATACONTAINERBASE_H
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 namespace velodyne_rawdata
 {

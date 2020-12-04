@@ -37,7 +37,7 @@
 namespace velodyne_driver
 {
   static const size_t packet_size =
-    sizeof(velodyne_msgs::VelodynePacket().data);
+    sizeof(velodyne_msgs::msg::VelodynePacket().data);
 
   ////////////////////////////////////////////////////////////////////////
   // Input base class implementation
@@ -45,17 +45,17 @@ namespace velodyne_driver
 
   /** @brief constructor
    *
-   *  @param private_nh ROS private handle for calling node.
+   *  @param node_ptr ROS node handle for calling node.
    *  @param port UDP port number.
    */
-  Input::Input(ros::NodeHandle private_nh, uint16_t port):
-    private_nh_(private_nh),
+  Input::Input(rclcpp::Node * node_ptr, uint16_t port):
+    node_ptr_(node_ptr),
     port_(port)
   {
-    private_nh.param("device_ip", devip_str_, std::string(""));
-    private_nh.param("sensor_timestamp", sensor_timestamp_, false);
+    devip_str_ = node_ptr_->declare_parameter("device_ip", std::string(""));
+    sensor_timestamp_ = node_ptr_->declare_parameter("sensor_timestamp", false);
     if (!devip_str_.empty())
-      ROS_INFO_STREAM("Only accepting packets from IP address: "
+      RCLCPP_INFO_STREAM(node_ptr_->get_logger(), "Only accepting packets from IP address: "
                       << devip_str_);
   }
 
@@ -68,8 +68,8 @@ namespace velodyne_driver
    *  @param private_nh ROS private handle for calling node.
    *  @param port UDP port number
    */
-  InputSocket::InputSocket(ros::NodeHandle private_nh, uint16_t port):
-    Input(private_nh, port)
+  InputSocket::InputSocket(rclcpp::Node * node_ptr, uint16_t port):
+    Input(node_ptr, port)
   {
     sockfd_ = -1;
 
@@ -78,11 +78,11 @@ namespace velodyne_driver
     }
 
     // connect to Velodyne UDP port
-    ROS_INFO_STREAM("Opening UDP socket: port " << port);
+    RCLCPP_INFO_STREAM(node_ptr_->get_logger(), "Opening UDP socket: port " << port);
     sockfd_ = socket(PF_INET, SOCK_DGRAM, 0);
     if (sockfd_ == -1)
       {
-        perror("socket");               // TODO: ROS_ERROR errno
+        perror("socket");               // TODO: RCLCPP_ERROR errno
         return;
       }
 
@@ -94,7 +94,7 @@ namespace velodyne_driver
 
     if (bind(sockfd_, (sockaddr *)&my_addr, sizeof(sockaddr)) == -1)
       {
-        perror("bind");                 // TODO: ROS_ERROR errno
+        perror("bind");                 // TODO: RCLCPP_ERROR errno
         return;
       }
 
@@ -104,7 +104,7 @@ namespace velodyne_driver
         return;
       }
 
-    ROS_DEBUG("Velodyne socket fd is %d\n", sockfd_);
+    RCLCPP_DEBUG(node_ptr_->get_logger(), "Velodyne socket fd is %d\n", sockfd_);
   }
 
   /** @brief destructor */
@@ -119,9 +119,9 @@ namespace velodyne_driver
   }
 
   /** @brief Get one velodyne packet. */
-  int InputSocket::getPacket(velodyne_msgs::VelodynePacket *pkt, const double time_offset)
+  int InputSocket::getPacket(velodyne_msgs::msg::VelodynePacket *pkt, const double time_offset)
   {
-    double time1 = ros::Time::now().toSec();
+    double time1 = node_ptr_->now().seconds();
 
     struct pollfd fds[1];
     fds[0].fd = sockfd_;
@@ -131,7 +131,7 @@ namespace velodyne_driver
     sockaddr_in sender_address;
     socklen_t sender_address_len = sizeof(sender_address);
 
-    while (true)
+    while (rclcpp::ok())
       {
         // Unfortunately, the Linux kernel recvfrom() implementation
         // uses a non-interruptible sleep() when waiting for data,
@@ -153,23 +153,28 @@ namespace velodyne_driver
         // poll() until input available
         do
           {
+            if(!rclcpp::ok())
+            {
+              RCLCPP_ERROR(node_ptr_->get_logger(), "poll() error: shutdown requested");
+              return 1;
+            }
             int retval = poll(fds, 1, POLL_TIMEOUT);
             if (retval < 0)             // poll() error?
               {
                 if (errno != EINTR)
-                  ROS_ERROR("poll() error: %s", strerror(errno));
+                  RCLCPP_ERROR(node_ptr_->get_logger(), "poll() error: %s", strerror(errno));
                 return 1;
               }
             if (retval == 0)            // poll() timeout?
               {
-                ROS_WARN("Velodyne poll() timeout");
+                RCLCPP_WARN(node_ptr_->get_logger(), "Velodyne poll() timeout");
                 return 1;
               }
             if ((fds[0].revents & POLLERR)
                 || (fds[0].revents & POLLHUP)
                 || (fds[0].revents & POLLNVAL)) // device error?
               {
-                ROS_ERROR("poll() reports Velodyne error");
+                RCLCPP_ERROR(node_ptr_->get_logger(), "poll() reports Velodyne error");
                 return 1;
               }
           } while ((fds[0].revents & POLLIN) == 0);
@@ -186,7 +191,7 @@ namespace velodyne_driver
             if (errno != EWOULDBLOCK)
               {
                 perror("recvfail");
-                ROS_INFO("recvfail");
+                RCLCPP_INFO(node_ptr_->get_logger(), "recvfail");
                 return 1;
               }
           }
@@ -202,17 +207,18 @@ namespace velodyne_driver
               break; //done
           }
 
-        ROS_DEBUG_STREAM("incomplete Velodyne packet read: "
+        RCLCPP_DEBUG_STREAM(node_ptr_->get_logger(), "incomplete Velodyne packet read: "
                          << nbytes << " bytes");
       }
 
       if (!sensor_timestamp_) {
         // Packet stamp from when read began. Add the time offset.
-        pkt->stamp = ros::Time(time1 + time_offset);
+        pkt->stamp = rclcpp::Time(time1 + time_offset);
       } else {
         // Time for each packet is a 4 byte uint located starting at offset 1200 in
         // the data packet
-        pkt->stamp = rosTimeFromGpsTimestamp(&(pkt->data[1200]));
+        auto ros_time_now = node_ptr_->now();
+        pkt->stamp = rosTimeFromGpsTimestamp(ros_time_now, &(pkt->data[1200]));
       }
 
 
@@ -230,10 +236,10 @@ namespace velodyne_driver
    *  @param packet_rate expected device packet frequency (Hz)
    *  @param filename PCAP dump file name
    */
-  InputPCAP::InputPCAP(ros::NodeHandle private_nh, uint16_t port,
+  InputPCAP::InputPCAP(rclcpp::Node * node_ptr, uint16_t port,
                        double packet_rate, std::string filename,
                        bool read_once, bool read_fast, double repeat_delay):
-    Input(private_nh, port),
+    Input(node_ptr, port),
     packet_rate_(packet_rate),
     filename_(filename)
   {
@@ -241,23 +247,23 @@ namespace velodyne_driver
     empty_ = true;
 
     // get parameters using private node handle
-    private_nh.param("read_once", read_once_, false);
-    private_nh.param("read_fast", read_fast_, false);
-    private_nh.param("repeat_delay", repeat_delay_, 0.0);
+    read_once_ = node_ptr_->declare_parameter("read_once", false);
+    read_fast_ = node_ptr_->declare_parameter("read_fast", false);
+    repeat_delay_ = node_ptr_->declare_parameter("repeat_delay", 0.0);
 
     if (read_once_)
-      ROS_INFO("Read input file only once.");
+      RCLCPP_INFO(node_ptr_->get_logger(), "Read input file only once.");
     if (read_fast_)
-      ROS_INFO("Read input file as quickly as possible.");
+      RCLCPP_INFO(node_ptr_->get_logger(), "Read input file as quickly as possible.");
     if (repeat_delay_ > 0.0)
-      ROS_INFO("Delay %.3f seconds before repeating input file.",
+      RCLCPP_INFO(node_ptr_->get_logger(), "Delay %.3f seconds before repeating input file.",
                repeat_delay_);
 
     // Open the PCAP dump file
-    ROS_INFO("Opening PCAP file \"%s\"", filename_.c_str());
+    RCLCPP_INFO(node_ptr_->get_logger(), "Opening PCAP file \"%s\"", filename_.c_str());
     if ((pcap_ = pcap_open_offline(filename_.c_str(), errbuf_) ) == NULL)
       {
-        ROS_FATAL("Error opening Velodyne socket dump file.");
+        RCLCPP_FATAL(node_ptr_->get_logger(), "Error opening Velodyne socket dump file.");
         return;
       }
 
@@ -285,10 +291,10 @@ namespace velodyne_driver
     {
       delete pwait_time ;
     }
-    pwait_time = new ros::Duration(1.0/packet_rate);
+    pwait_time = new rclcpp::Duration(1.0/packet_rate);
   }
   /** @brief Get one velodyne packet. */
-  int InputPCAP::getPacket(velodyne_msgs::VelodynePacket *pkt, const double time_offset)
+  int InputPCAP::getPacket(velodyne_msgs::msg::VelodynePacket *pkt, const double time_offset)
   {
     struct pcap_pkthdr *header;
     const u_char *pkt_data;
@@ -310,39 +316,40 @@ namespace velodyne_driver
             // Keep the reader from blowing through the file.
             if (read_fast_ == false)
             {
-              if(pwait_time == NULL) // use initial estimated wait from configs
+              // if(pwait_time == NULL) // use initial estimated wait from configs
                 packet_rate_.sleep();
-              else
-                pwait_time->sleep();  // use auto rpm derived wait time
+              // else
+              //   pwait_time->sleep();  // use auto rpm derived wait time
             }
 
             memcpy(&pkt->data[0], pkt_data+42, packet_size);
-            pkt->stamp = rosTimeFromGpsTimestamp(&(pkt->data[1200])); // time_offset not considered here, as no synchronization required
+            auto ros_time_now = node_ptr_->now();
+            pkt->stamp = rosTimeFromGpsTimestamp(ros_time_now, &(pkt->data[1200])); // time_offset not considered here, as no synchronization required
             empty_ = false;
             return 0;                   // success
           }
 
         if (empty_)                 // no data in file?
           {
-            ROS_WARN("Error %d reading Velodyne packet: %s",
+            RCLCPP_WARN(node_ptr_->get_logger(), "Error %d reading Velodyne packet: %s",
                      res, pcap_geterr(pcap_));
             return -1;
           }
 
         if (read_once_)
           {
-            ROS_INFO("end of file reached -- done reading.");
+            RCLCPP_INFO(node_ptr_->get_logger(), "end of file reached -- done reading.");
             return -1;
           }
 
         if (repeat_delay_ > 0.0)
           {
-            ROS_INFO("end of file reached -- delaying %.3f seconds.",
+            RCLCPP_INFO(node_ptr_->get_logger(), "end of file reached -- delaying %.3f seconds.",
                      repeat_delay_);
             usleep(rint(repeat_delay_ * 1000000.0));
           }
 
-        ROS_DEBUG("replaying Velodyne dump file");
+        RCLCPP_DEBUG(node_ptr_->get_logger(), "replaying Velodyne dump file");
 
         // I can't figure out how to rewind the file, because it
         // starts with some kind of header.  So, close the file

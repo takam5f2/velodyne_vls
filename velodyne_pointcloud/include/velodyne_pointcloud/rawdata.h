@@ -43,9 +43,11 @@
 #include <string>
 #include <vector>
 
-#include <pcl_ros/point_cloud.h>
-#include <ros/ros.h>
-#include <velodyne_msgs/VelodyneScan.h>
+#include <pcl/point_cloud.h>
+
+#include <rclcpp/rclcpp.hpp>
+#include <velodyne_msgs/msg/velodyne_packet.hpp>
+
 #include <velodyne_pointcloud/calibration.h>
 #include <velodyne_pointcloud/point_types.h>
 
@@ -144,7 +146,7 @@ typedef struct raw_packet
 class RawData
 {
 public:
-  RawData();
+  RawData(rclcpp::Node * node_ptr);
   ~RawData() {}
 
   /** \brief Set up for data processing.
@@ -154,11 +156,10 @@ public:
    *
    *    - read device-specific angles calibration
    *
-   *  @param private_nh private node handle for ROS parameters
    *  @returns 0 if successful;
    *           errno value for failure
    */
-  int setup(ros::NodeHandle private_nh);
+  int setup();
 
   /** \brief Set up for data processing offline.
    * Performs the same initialization as in setup, in the abscence of a ros::NodeHandle.
@@ -173,7 +174,7 @@ public:
    */
   int setupOffline(std::string calibration_file, double max_range_, double min_range_);
 
-  void unpack(const velodyne_msgs::VelodynePacket & pkt, DataContainerBase & data);
+  void unpack(const velodyne_msgs::msg::VelodynePacket & pkt, DataContainerBase & data);
 
   void setParameters(double min_range, double max_range, double view_direction, double view_width);
 
@@ -197,6 +198,9 @@ private:
   } Config;
   Config config_;
 
+  // ROS node hanlder
+  rclcpp::Node * node_ptr_;
+
   /**
    * Calibration file
    */
@@ -208,10 +212,10 @@ private:
   float vls_128_laser_azimuth_cache[16];
 
   /** add private function to handle the VLP16 **/
-  void unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContainerBase & data);
+  void unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataContainerBase & data);
 
   /** add private function to handle the VLS128 **/
-  void unpack_vls128(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data);
+  void unpack_vls128(const velodyne_msgs::msg::VelodynePacket &pkt, DataContainerBase &data);
 
   /** in-line test whether a point is in range */
   bool pointInRange(float range)

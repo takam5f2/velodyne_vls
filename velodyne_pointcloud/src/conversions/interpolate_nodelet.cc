@@ -7,7 +7,7 @@
 
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include "velodyne_pointcloud/interpolate.h"
 

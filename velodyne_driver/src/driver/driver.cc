@@ -19,9 +19,8 @@
 #include <time.h>
 #include <stdio.h>
 #include <math.h>
-#include <ros/ros.h>
-#include <tf/transform_listener.h>
-#include <velodyne_msgs/VelodyneScan.h>
+#include <rclcpp/rclcpp.hpp>
+#include <tf2_ros/transform_listener.h>
 
 #include "driver.h"
 
@@ -87,7 +86,7 @@ Dual Return 0x39 (57) Puck LITE 0x22 (34)
     case 99:
         return(8); // vls128
     default:
-        ROS_WARN_STREAM("[Velodyne Ros driver]Default assumption of device id .. Defaulting to HDL64E with 2 simultaneous firings");
+        RCLCPP_WARN_STREAM(rclcpp::get_logger("get_concurrent_beams"), "[Velodyne Ros driver]Default assumption of device id .. Defaulting to HDL64E with 2 simultaneous firings");
         return(2); // hdl-64e
 
   }
@@ -126,7 +125,7 @@ inline int get_rmode_multiplier(uint8_t sensor_model, uint8_t packet_rmode)
       case 99:
           return(3); // vls128
       default:
-          ROS_WARN_STREAM("[Velodyne Ros driver]Default assumption of device id .. Defaulting to HDL64E with 2x number of packekts for Dual return");
+          RCLCPP_WARN_STREAM(rclcpp::get_logger("get_rmode_multiplier"), "[Velodyne Ros driver]Default assumption of device id .. Defaulting to HDL64E with 2x number of packekts for Dual return");
           return(2); // hdl-64e
     }
    }
@@ -136,6 +135,20 @@ inline int get_rmode_multiplier(uint8_t sensor_model, uint8_t packet_rmode)
    }
 }
 
+/** \brief For parameter service callback */
+template <typename T>
+bool get_param(const std::vector<rclcpp::Parameter> & p, const std::string & name, T & value)
+{
+  auto it = std::find_if(p.cbegin(), p.cend(), [&name](const rclcpp::Parameter & parameter) {
+    return parameter.get_name() == name;
+  });
+  if (it != p.cend()) {
+    value = it->template get_value<T>();
+    return true;
+  }
+  return false;
+}
+
 /** Constructor for the Velodyne driver
  *
  *  provides a binding to ROS node for processing and
@@ -143,17 +156,20 @@ inline int get_rmode_multiplier(uint8_t sensor_model, uint8_t packet_rmode)
  *  @returns handle to driver object
  */
 
-VelodyneDriver::VelodyneDriver(ros::NodeHandle node,
-                               ros::NodeHandle private_nh)
+VelodyneDriver::VelodyneDriver(rclcpp::Node * node_ptr)
+: node_ptr_(node_ptr),
+  diagnostics_(node_ptr_, 0.2)
 {
   // use private node handle to get parameters
-  private_nh.param("frame_id", config_.frame_id, std::string("velodyne"));
-  std::string tf_prefix = tf::getPrefixParam(private_nh);
-  ROS_DEBUG_STREAM("tf_prefix: " << tf_prefix);
-  config_.frame_id = tf::resolve(tf_prefix, config_.frame_id);
+  config_.frame_id = node_ptr_->declare_parameter("frame_id", std::string("velodyne"));
+
+  // TODO (mitsudome-r) : port this when getPrefix becomes available in ROS2
+  // std::string tf_prefix = tf::getPrefixParam(private_nh);
+  //  RCLCPP_DEBUG_STREAM(node_ptr_->get_logger(), "tf_prefix: " << tf_prefix);
+  // config_.frame_id = tf::resolve(tf_prefix, config_.frame_id);
 
   // get model name, validate string, determine packet rate
-  private_nh.param("model", config_.model, std::string("64E"));
+  config_.model = node_ptr_->declare_parameter("model", std::string("64E"));
   double packet_rate;                   // packet frequency (Hz)
   std::string model_full_name;
   if ((config_.model == "64E_S2") ||
@@ -194,39 +210,36 @@ VelodyneDriver::VelodyneDriver(ros::NodeHandle node,
     }
   else
     {
-      ROS_ERROR_STREAM("Unknown Velodyne LIDAR model: " << config_.model);
+      RCLCPP_ERROR_STREAM(node_ptr_->get_logger(), "Unknown Velodyne LIDAR model: " << config_.model);
       packet_rate = 2600.0;
     }
   std::string deviceName(std::string("Velodyne ") + model_full_name);
 
-  private_nh.param("rpm", config_.rpm, 600.0);
-  private_nh.getParam("rpm", config_.rpm);
-  ROS_INFO_STREAM(deviceName << " rotating at " << config_.rpm << " RPM");
+  config_.rpm = node_ptr_->declare_parameter("rpm", 600.0);
+  config_.rpm = node_ptr_->get_parameter("rpm").as_double();
+  RCLCPP_INFO_STREAM(node_ptr_->get_logger(), deviceName << " rotating at " << config_.rpm << " RPM");
   double frequency = (config_.rpm / 60.0);     // expected Hz rate
 
-  private_nh.param("scan_phase", config_.scan_phase, 0.0);
-  private_nh.getParam("scan_phase", config_.scan_phase);
-  ROS_INFO_STREAM("Scan start/end will be at a phase of " << config_.scan_phase  << " degrees");
+  config_.scan_phase = node_ptr_->declare_parameter("scan_phase", 0.0);
+  config_.scan_phase = node_ptr_->get_parameter("scan_phase").as_double();
+  RCLCPP_INFO_STREAM(node_ptr_->get_logger(), "Scan start/end will be at a phase of " << config_.scan_phase  << " degrees");
 
-  private_nh.param("pcap", dump_file, std::string(""));
+  dump_file = node_ptr_->declare_parameter("pcap", std::string(""));
 
   int udp_port;
-  private_nh.param("port", udp_port, (int) DATA_PORT_NUMBER);
+  udp_port = node_ptr_->declare_parameter("port", (int) DATA_PORT_NUMBER);
 
   // Initialize dynamic reconfigure
-  srv_ = boost::make_shared <dynamic_reconfigure::Server<velodyne_driver::
-    VelodyneNodeConfig> > (private_nh);
-  dynamic_reconfigure::Server<velodyne_driver::VelodyneNodeConfig>::
-    CallbackType f;
-  f = boost::bind (&VelodyneDriver::callback, this, _1, _2);
-  srv_->setCallback (f); // Set callback function und call initially
+  using std::placeholders::_1;
+  set_param_res_ = node_ptr_->add_on_set_parameters_callback(
+    std::bind(&VelodyneDriver::paramCallback, this, _1));
 
   // Initialize diagnostics
   diagnostics_.setHardwareID(deviceName);
   const double diag_freq = frequency;
   diag_max_freq_ = diag_freq;
   diag_min_freq_ = diag_freq;
-  ROS_INFO("Expected frequency: %.3f (Hz)", diag_freq);
+  RCLCPP_INFO(node_ptr_->get_logger(), "Expected frequency: %.3f (Hz)", diag_freq);
 
   using namespace diagnostic_updater;
   diag_topic_.reset(new TopicDiagnostic("velodyne_packets", diagnostics_,
@@ -239,18 +252,18 @@ VelodyneDriver::VelodyneDriver(ros::NodeHandle node,
   if (dump_file != "")                  // have PCAP file?
     {
       // read data from packet capture file
-      input_.reset(new velodyne_driver::InputPCAP(private_nh, udp_port,
+      input_.reset(new velodyne_driver::InputPCAP(node_ptr_, udp_port,
                                                   packet_rate, dump_file));
     }
   else
     {
       // read data from live socket
-      input_.reset(new velodyne_driver::InputSocket(private_nh, udp_port));
+      input_.reset(new velodyne_driver::InputSocket(node_ptr_, udp_port));
     }
 
   // raw packet output topic
   output_ =
-    node.advertise<velodyne_msgs::VelodyneScan>("velodyne_packets", 10);
+    node_ptr_->create_publisher<velodyne_msgs::msg::VelodyneScan>("velodyne_packets", 10);
 }
 
 /** poll the device
@@ -261,7 +274,7 @@ VelodyneDriver::VelodyneDriver(ros::NodeHandle node,
 bool VelodyneDriver::poll(void)
 {
   // Allocate a new shared pointer for zero-copy sharing with other nodelets.
-  velodyne_msgs::VelodyneScanPtr scan(new velodyne_msgs::VelodyneScan);
+  auto scan = std::make_shared<velodyne_msgs::msg::VelodyneScan>();
 
   // Since the velodyne delivers data at a very high rate, keep
   // reading and publishing scans as fast as possible.
@@ -274,12 +287,12 @@ bool VelodyneDriver::poll(void)
   uint16_t phase = (uint16_t)round(config_.scan_phase*100);
   bool use_next_packet = true;
   uint processed_packets = 0;
-  while (use_next_packet)
+  while (use_next_packet && rclcpp::ok())
   {
-    while (true)
+    while (rclcpp::ok())
     {
         // keep reading until full packet received
-        velodyne_msgs::VelodynePacket new_packet;
+        velodyne_msgs::msg::VelodynePacket new_packet;
         scan->packets.push_back(new_packet);
         int rc = input_->getPacket(&scan->packets.back(), config_.time_offset);
         if (rc == 0) break;       // got a full packet?
@@ -313,35 +326,46 @@ bool VelodyneDriver::poll(void)
   }
 
   // average the time stamp from first package and last package
-  ros::Time firstTimeStamp = scan->packets.front().stamp;
-  ros::Time lastTimeStamp = scan->packets.back().stamp;
-  ros::Time  meanTimeStamp = firstTimeStamp + (lastTimeStamp - firstTimeStamp) * 0.5;
+  rclcpp::Time firstTimeStamp = scan->packets.front().stamp;
+  rclcpp::Time lastTimeStamp = scan->packets.back().stamp;
+  rclcpp::Time  meanTimeStamp = firstTimeStamp + (lastTimeStamp - firstTimeStamp) * 0.5;
 
   // publish message using time of first packet read
-  ROS_DEBUG("Publishing a full Velodyne scan.");
+  RCLCPP_DEBUG(node_ptr_->get_logger(), "Publishing a full Velodyne scan.");
   scan->header.stamp = scan->packets.front().stamp;
   // scan->scan->header.stamp = scan->packets[scan->packets.size()/2].stamp;
   scan->header.frame_id = config_.frame_id;
-  output_.publish(scan);
+  output_->publish(*scan);
   // notify diagnostics that a message has been published, updating
   // its status
   diag_topic_->tick(scan->header.stamp);
-  diagnostics_.update();
+  diagnostics_.force_update();
 
   if (dump_file != "" && processed_packets > 1)                  // have PCAP file?
   {
-    double scan_packet_rate = (double)(processed_packets - 1)/(lastTimeStamp - firstTimeStamp).toSec();
+    double scan_packet_rate = (double)(processed_packets - 1)/(lastTimeStamp - firstTimeStamp).seconds();
     input_->setPacketRate(scan_packet_rate);
   }
   return true;
 }
 
-void VelodyneDriver::callback(velodyne_driver::VelodyneNodeConfig &config,
-              uint32_t level)
+rcl_interfaces::msg::SetParametersResult VelodyneDriver::paramCallback(const std::vector<rclcpp::Parameter> & p)
 {
-  ROS_INFO("Reconfigure Request");
-  config_.time_offset = config.time_offset;
-  config_.scan_phase = config.scan_phase;
+  RCLCPP_INFO(node_ptr_->get_logger(), "Reconfigure Request");
+
+  if (get_param(p, "time_offset", config_.time_offset)) {
+    RCLCPP_DEBUG(node_ptr_->get_logger(), "Setting new time_offset to: %f.", config_.time_offset);
+  }
+  if (get_param(p, "scan_phase", config_.scan_phase)) {
+    RCLCPP_DEBUG(node_ptr_->get_logger(), "Setting scan_phase to: %f.", config_.scan_phase);
+  }
+
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+
+  return result;
+
 }
 
 } // namespace velodyne_driver

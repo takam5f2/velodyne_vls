@@ -90,7 +90,7 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr extractInvalidNearPoint
                      29, 31, 4, 8, 3, 7, 12, 16, 11, 15, 20, 19, 24, 23, 27, 28};
   }
   else {
-    // ROS_WARN_STREAM_THROTTLE(10, "support only VLP16 and VLP32C");
+    // RCLCPP_WARN_STREAM_THROTTLE(10, "support only VLP16 and VLP32C");
     pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr output_pointcloud(new pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>);
     output_pointcloud->header = input_pointcloud->header;
     output_pointcloud->height = 1;
@@ -158,7 +158,7 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr extractInvalidNearPoint
 
 pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
   const pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::ConstPtr & input_pointcloud,
-  const std::deque<geometry_msgs::TwistStamped> & twist_queue,
+  const std::deque<geometry_msgs::msg::TwistStamped> & twist_queue,
   const tf2::Transform & tf2_base_link_to_sensor)
 {
   pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr output_pointcloud(
@@ -166,7 +166,8 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
   output_pointcloud->reserve(input_pointcloud->points.size());
 
   if (input_pointcloud->points.empty() || twist_queue.empty()) {
-    ROS_WARN_STREAM_THROTTLE(10, "input_pointcloud->points or twist_queue is empty.");
+    auto ros_clock = rclcpp::Clock(RCL_ROS_TIME);
+    RCLCPP_WARN_STREAM_THROTTLE(rclcpp::get_logger("velodyne_interpolate"), ros_clock, 10000 /* ms */, "input_pointcloud->points or twist_queue is empty.");
     *output_pointcloud = *input_pointcloud;
     return output_pointcloud;
   }
@@ -176,22 +177,23 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
 
   auto twist_it = std::lower_bound(
     std::begin(twist_queue), std::end(twist_queue),
-    ros::Time(input_pointcloud->points.front().time_stamp),
-    [](const geometry_msgs::TwistStamped & x, ros::Time t) { return x.header.stamp < t; });
+    rclcpp::Time(input_pointcloud->points.front().time_stamp),
+    [](const geometry_msgs::msg::TwistStamped & x, rclcpp::Time t) { return rclcpp::Time(x.header.stamp) < t; });
   twist_it = twist_it == std::end(twist_queue) ? std::end(twist_queue) - 1 : twist_it;
 
   const tf2::Transform tf2_base_link_to_sensor_inv = tf2_base_link_to_sensor.inverse();
   for (const auto & p : input_pointcloud->points) {
-    for (; (twist_it != std::end(twist_queue) - 1 && p.time_stamp > twist_it->header.stamp.toSec());
+    for (; (twist_it != std::end(twist_queue) - 1 && p.time_stamp > rclcpp::Time(twist_it->header.stamp).seconds());
          ++twist_it) {
-      // std::cout << std::fixed << p.time_stamp << " " << twist_it->header.stamp.toSec() << std::endl;
+      // std::cout << std::fixed << p.time_stamp << " " << rclcpp::Time(twist_it->header.stamp).seconds() << std::endl;
     }
 
     float v = twist_it->twist.linear.x;
     float w = twist_it->twist.angular.z;
 
-    if (std::fabs(p.time_stamp - twist_it->header.stamp.toSec()) > 0.1) {
-      ROS_WARN_STREAM_THROTTLE(10, "Twist time_stamp is too late. Cloud not interpolate.");
+    if (std::fabs(p.time_stamp - rclcpp::Time(twist_it->header.stamp).seconds()) > 0.1) {
+      auto ros_clock = rclcpp::Clock(RCL_ROS_TIME);
+      RCLCPP_WARN_STREAM_THROTTLE(rclcpp::get_logger("velodyne_interpolate"), ros_clock, 10000 /* ms */, "Twist time_stamp is too late. Cloud not interpolate.");
       v = 0;
       w = 0;
     }

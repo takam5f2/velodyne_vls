@@ -13,7 +13,7 @@
 
 */
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include "velodyne_pointcloud/colors.h"
 
 /** Main node entry point. */

@@ -5,7 +5,7 @@
  *  $Id$
  */
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include "velodyne_pointcloud/interpolate.h"
 
 /** Main node entry point. */

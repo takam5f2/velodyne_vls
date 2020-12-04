@@ -17,7 +17,7 @@
 #ifndef __POINTCLOUDXYZIR_H
 #define __POINTCLOUDXYZIR_H
 
-#include <pcl_ros/point_cloud.h>
+#include <pcl/point_cloud.h>
 #include <velodyne_pointcloud/datacontainerbase.h>
 
 #include <velodyne_pointcloud/point_types.h>

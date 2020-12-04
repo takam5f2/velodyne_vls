@@ -19,8 +19,8 @@
 #define _VELODYNE_POINTCLOUD_COLORS_H_
 
 #include <pcl/point_types.h>
-#include <pcl_ros/point_cloud.h>
-#include <ros/ros.h>
+#include <pcl/point_cloud.h>
+#include <rclcpp/rclcpp.hpp>
 #include <velodyne_pointcloud/point_types.h>
 
 namespace velodyne_pointcloud

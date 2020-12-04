@@ -1,31 +1,22 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5)
 project(velodyne_pointcloud)
 
-add_compile_options(-std=c++14)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
 set(CMAKE_BUILD_TYPE "Release")
 
-set(${PROJECT_NAME}_CATKIN_DEPS
-    angles
-    nodelet
-    pcl_ros
-    roscpp
-    roslib
-    sensor_msgs
-    tf
-    tf2
-    tf2_ros
-    tf2_geometry_msgs
-    velodyne_driver
-    velodyne_msgs
-    dynamic_reconfigure
-    cv_bridge
-    image_transport
-)
+find_package(ament_cmake_auto REQUIRED)
+ament_auto_find_build_dependencies()
 
-find_package(catkin REQUIRED COMPONENTS
-             ${${PROJECT_NAME}_CATKIN_DEPS} pcl_conversions)
+
 find_package(Boost COMPONENTS signals)
+find_package(PCL REQUIRED COMPONENTS common)
 
 # Resolve system dependency on yaml-cpp, which apparently does not
 # provide a CMake find_package() module.
@@ -42,48 +33,63 @@ find_package(OpenCV REQUIRED)
 
 link_directories(${YAML_CPP_LIBRARY_DIRS})
 
-generate_dynamic_reconfigure_options(
-  cfg/CloudNode.cfg cfg/TransformNode.cfg
-)
-
 if(NOT ${YAML_CPP_VERSION} VERSION_LESS "0.5")
   add_definitions(-DHAVE_NEW_YAMLCPP)
 endif(NOT ${YAML_CPP_VERSION} VERSION_LESS "0.5")
 
-include_directories(include ${catkin_INCLUDE_DIRS}
-  ${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake
+include_directories(
   ${OpenCV_INCLUDE_DIRS}
+  ${PCL_COMMON_INCLUDE_DIRS}
 )
 
-catkin_package(
-    CATKIN_DEPENDS ${${PROJECT_NAME}_CATKIN_DEPS}
-    INCLUDE_DIRS include
-    LIBRARIES velodyne_rawdata)
+# add_subdirectory(src/lib)
+ament_auto_add_library(velodyne_rawdata SHARED src/lib/rawdata.cc src/lib/calibration.cc)
 
-#add_executable(dynamic_reconfigure_node src/dynamic_reconfigure_node.cpp)
-#target_link_libraries(dynamic_reconfigure_node
-#   ${catkin_LIBRARIES}
-# )
+ament_auto_add_library(cloud_nodelet SHARED
+  src/conversions/convert.cc 
+  src/conversions/pointcloudXYZIR.cc 
+  src/conversions/pointcloudXYZIRADT.cc 
+  src/conversions/func.cc
+)
+target_link_libraries(cloud_nodelet velodyne_rawdata ${YAML_CPP_LIBRARIES} ${OpenCV_LIBS})
+rclcpp_components_register_node(cloud_nodelet
+  PLUGIN "velodyne_pointcloud::Convert"
+  EXECUTABLE cloud_node
+)
 
-add_subdirectory(src/lib)
-add_subdirectory(src/conversions)
+ament_auto_add_library(interpolate_nodelet SHARED
+  src/conversions/interpolate.cc
+  src/conversions/pointcloudXYZIR.cc
+  src/conversions/pointcloudXYZIRADT.cc
+  src/conversions/func.cc)
+target_link_libraries(interpolate_nodelet ${OpenCV_LIBS})
 
-install(DIRECTORY include/${PROJECT_NAME}/
-        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+rclcpp_components_register_node(interpolate_nodelet
+  PLUGIN "velodyne_pointcloud::Interpolate"
+  EXECUTABLE interpolate_node
+)
 
-install(FILES nodelets.xml
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+ament_auto_add_library(transform_nodelet SHARED
+  src/conversions/transform.cc
+  src/conversions/pointcloudXYZIR.cc
+)
+target_link_libraries(transform_nodelet ${YAML_CPP_LIBRARIES})
 
-install(PROGRAMS scripts/gen_calibration.py
-        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+rclcpp_components_register_node(transform_nodelet
+  PLUGIN "velodyne_pointcloud::Interpolate"
+  EXECUTABLE transform_node
+)
+# add_subdirectory(src/conversions)
 
-install(
-  DIRECTORY
+# install(PROGRAMS scripts/gen_calibration.py
+#         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+ament_auto_package(
+  INSTALL_TO_SHARE
     launch
     params
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-if (CATKIN_ENABLE_TESTING)
-  add_subdirectory(tests)
-endif()
+# if (CATKIN_ENABLE_TESTING)
+#   add_subdirectory(tests)
+# endif()
