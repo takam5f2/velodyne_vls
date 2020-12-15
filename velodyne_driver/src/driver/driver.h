@@ -27,12 +27,12 @@
 namespace velodyne_driver
 {
 
-class VelodyneDriver
+class VelodyneDriverCore
 {
 public:
 
-  VelodyneDriver(rclcpp::Node * node_ptr);
-  ~VelodyneDriver() {}
+  VelodyneDriverCore(rclcpp::Node * node_ptr);
+  ~VelodyneDriverCore() {}
 
   bool poll(void);
 

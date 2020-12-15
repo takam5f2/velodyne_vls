@@ -23,18 +23,18 @@
 namespace velodyne_driver
 {
 
-class DriverNodelet: public rclcpp::Node
+class VelodyneDriver: public rclcpp::Node
 {
 public:
 
-  DriverNodelet(const rclcpp::NodeOptions & options)
+  VelodyneDriver(const rclcpp::NodeOptions & options)
   : Node("velodyne_driver_node", options),
     running_(false)
   {
     onInit();
   }
 
-  ~DriverNodelet()
+  ~VelodyneDriver()
   {
     if (running_)
       {
@@ -53,22 +53,22 @@ private:
   volatile bool running_;               ///< device thread is running
   std::shared_ptr<std::thread> deviceThread_;
 
-  std::shared_ptr<VelodyneDriver> dvr_; ///< driver implementation class
+  std::shared_ptr<VelodyneDriverCore> dvr_; ///< driver implementation class
 };
 
-void DriverNodelet::onInit()
+void VelodyneDriver::onInit()
 {
   // start the driver
-  dvr_.reset(new VelodyneDriver(this));
+  dvr_.reset(new VelodyneDriverCore(this));
 
   // spawn device poll thread
   running_ = true;
   deviceThread_ = std::shared_ptr< std::thread >
-    (new std::thread(std::bind(&DriverNodelet::devicePoll, this)));
+    (new std::thread(std::bind(&VelodyneDriver::devicePoll, this)));
 }
 
 /** @brief Device poll thread main loop. */
-void DriverNodelet::devicePoll()
+void VelodyneDriver::devicePoll()
 {
   while(rclcpp::ok())
   {
@@ -84,4 +84,4 @@ void DriverNodelet::devicePoll()
 
 #include <rclcpp_components/register_node_macro.hpp>
 
-RCLCPP_COMPONENTS_REGISTER_NODE(velodyne_driver::DriverNodelet)
+RCLCPP_COMPONENTS_REGISTER_NODE(velodyne_driver::VelodyneDriver)

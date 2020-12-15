@@ -156,7 +156,7 @@ bool get_param(const std::vector<rclcpp::Parameter> & p, const std::string & nam
  *  @returns handle to driver object
  */
 
-VelodyneDriver::VelodyneDriver(rclcpp::Node * node_ptr)
+VelodyneDriverCore::VelodyneDriverCore(rclcpp::Node * node_ptr)
 : node_ptr_(node_ptr),
   diagnostics_(node_ptr_, 0.2)
 {
@@ -232,7 +232,7 @@ VelodyneDriver::VelodyneDriver(rclcpp::Node * node_ptr)
   // Initialize dynamic reconfigure
   using std::placeholders::_1;
   set_param_res_ = node_ptr_->add_on_set_parameters_callback(
-    std::bind(&VelodyneDriver::paramCallback, this, _1));
+    std::bind(&VelodyneDriverCore::paramCallback, this, _1));
 
   // Initialize diagnostics
   diagnostics_.setHardwareID(deviceName);
@@ -271,7 +271,7 @@ VelodyneDriver::VelodyneDriver(rclcpp::Node * node_ptr)
  * poll is used by nodelet to bind to the ROS thread.
  *  @returns true unless end of file reached
  */
-bool VelodyneDriver::poll(void)
+bool VelodyneDriverCore::poll(void)
 {
   // Allocate a new shared pointer for zero-copy sharing with other nodelets.
   auto scan = std::make_shared<velodyne_msgs::msg::VelodyneScan>();
@@ -349,7 +349,7 @@ bool VelodyneDriver::poll(void)
   return true;
 }
 
-rcl_interfaces::msg::SetParametersResult VelodyneDriver::paramCallback(const std::vector<rclcpp::Parameter> & p)
+rcl_interfaces::msg::SetParametersResult VelodyneDriverCore::paramCallback(const std::vector<rclcpp::Parameter> & p)
 {
   RCLCPP_INFO(node_ptr_->get_logger(), "Reconfigure Request");
 

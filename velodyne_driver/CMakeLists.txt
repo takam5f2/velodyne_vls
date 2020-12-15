@@ -20,7 +20,6 @@ set(libpcap_LIBRARIES -lpcap)
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(include)
 
-
 # compile the driver and input library
 add_subdirectory(src/lib)
 # add_subdirectory(src/driver)
@@ -34,10 +33,9 @@ ament_auto_add_library(velodyne_driver SHARED
 target_link_libraries(velodyne_driver velodyne_input)
 
 rclcpp_components_register_node(velodyne_driver
-  PLUGIN "velodyne_driver::DriverNodelet"
+  PLUGIN "velodyne_driver::VelodyneDriver"
   EXECUTABLE velodyne_driver_node
 )
-
 
 ament_auto_package(
   INSTALL_TO_SHARE
