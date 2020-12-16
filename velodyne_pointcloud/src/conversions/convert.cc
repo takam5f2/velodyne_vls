@@ -39,6 +39,12 @@ bool get_param(const std::vector<rclcpp::Parameter> & p, const std::string & nam
   return false;
 }
 
+inline std::chrono::nanoseconds toChronoNanoSeconds(const double seconds)
+{
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::duration<double>(seconds));
+}
+
 /** @brief Constructor. */
 Convert::Convert(const rclcpp::NodeOptions & options)
 : Node("velodyne_convert_node", options),
@@ -237,7 +243,7 @@ void Convert::processScan(const velodyne_msgs::msg::VelodyneScan::SharedPtr scan
     double last_point_timestamp = scan_points_xyziradt.pc->points.back().time_stamp;
     double average_timestamp = (first_point_timestamp + last_point_timestamp)/2;
     scan_points_xyziradt.pc->header.stamp =
-      pcl_conversions::toPCL(rclcpp::Time(first_point_timestamp) - rclcpp::Duration(0.0));
+      pcl_conversions::toPCL(rclcpp::Time(toChronoNanoSeconds(first_point_timestamp).count()) - rclcpp::Duration(0.0));
       //pcl_conversions::toPCL(scanMsg->packets[0].stamp - ros::Duration(0.0));
     scan_points_xyziradt.pc->height = 1;
     scan_points_xyziradt.pc->width = scan_points_xyziradt.pc->points.size();
