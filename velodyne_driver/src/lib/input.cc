@@ -214,9 +214,8 @@ namespace velodyne_driver
       if (!sensor_timestamp_) {
         // Packet stamp from when read began. Add the time offset.
         auto time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-          std::chrono::duration<double>(time1 + time_offset));
-
-        pkt->stamp = rclcpp::Time(time_ns);
+        std::chrono::duration<double>(time1 + time_offset));
+        pkt->stamp = rclcpp::Time(time_ns.count());
       } else {
         // Time for each packet is a 4 byte uint located starting at offset 1200 in
         // the data packet
