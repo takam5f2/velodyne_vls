@@ -261,11 +261,15 @@ void Convert::processScan(const velodyne_msgs::msg::VelodyneScan::SharedPtr scan
       const auto valid_points_xyzir = convert(valid_points_xyziradt);
       sensor_msgs::msg::PointCloud2 ros_pc_msg;
       pcl::toROSMsg(*valid_points_xyzir, ros_pc_msg);
+      double time_stamp_sec = valid_points_xyzir->header.stamp * 1.0/1e6;
+      ros_pc_msg.header.stamp = rclcpp::Time(toChronoNanoSeconds(time_stamp_sec).count());
       velodyne_points_pub_->publish(ros_pc_msg);
     }
     if (velodyne_points_ex_pub_->get_subscription_count() > 0) {
       sensor_msgs::msg::PointCloud2 ros_pc_msg;
       pcl::toROSMsg(*valid_points_xyziradt, ros_pc_msg);
+      double time_stamp_sec = valid_points_xyziradt->header.stamp * 1.0/1e6;
+      ros_pc_msg.header.stamp = rclcpp::Time(toChronoNanoSeconds(time_stamp_sec).count());
       velodyne_points_ex_pub_->publish(ros_pc_msg);
     }
   }

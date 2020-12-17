@@ -177,8 +177,10 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
 
   auto twist_it = std::lower_bound(
     std::begin(twist_queue), std::end(twist_queue),
-    rclcpp::Time(input_pointcloud->points.front().time_stamp),
-    [](const geometry_msgs::msg::TwistStamped & x, rclcpp::Time t) { return rclcpp::Time(x.header.stamp) < t; });
+    rclcpp::Time(input_pointcloud->points.front().time_stamp * 1000, RCL_ROS_TIME), // microsec to nanosec
+    [](const geometry_msgs::msg::TwistStamped & x, rclcpp::Time t) { 
+      return rclcpp::Time(x.header.stamp) < t;
+      });
   twist_it = twist_it == std::end(twist_queue) ? std::end(twist_queue) - 1 : twist_it;
 
   const tf2::Transform tf2_base_link_to_sensor_inv = tf2_base_link_to_sensor.inverse();
