@@ -336,13 +336,30 @@ void RawData::unpack(const velodyne_msgs::msg::VelodynePacket & pkt, DataContain
 
         double time_stamp =
           i * 55.296 / 1000.0 / 1000.0 + j * 2.304 / 1000.0 / 1000.0 + rclcpp::Time(pkt.stamp).seconds();
+        // Temporary to stop compile error - fix to give VLP32 support
+        uint8_t return_mode = pkt.data[1204];
+        uint8_t return_type;
+        switch (return_mode)
+        {
+          case RETURN_MODE_DUAL:
+            return_type = RETURN_TYPE::INVALID_RETURN;
+            break;
+          case RETURN_MODE_STRONGEST:
+            return_type = RETURN_TYPE::STRONGEST_RETURN;
+            break;
+          case RETURN_MODE_LAST:
+            return_type = RETURN_TYPE::LAST_RETURN;
+            break;
+          default:
+            return_type = RETURN_TYPE::INVALID_RETURN;
+        }
         if (is_invalid_distance) {
           data.addPoint(
-            x_coord, y_coord, z_coord, corrections.laser_ring, raw->blocks[i].rotation, 0,
+            x_coord, y_coord, z_coord, return_type, corrections.laser_ring, raw->blocks[i].rotation, 0,
             intensity, time_stamp);
         } else {
           data.addPoint(
-            x_coord, y_coord, z_coord, corrections.laser_ring, raw->blocks[i].rotation, distance,
+            x_coord, y_coord, z_coord, return_type, corrections.laser_ring, raw->blocks[i].rotation, distance,
             intensity, time_stamp);
         }
       }
@@ -529,13 +546,30 @@ void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataC
 
           double time_stamp = (block * 2 + firing) * 55.296 / 1000.0 / 1000.0 +
                               dsr * 2.304 / 1000.0 / 1000.0 + rclcpp::Time(pkt.stamp).seconds();
+          // Temporary to stop compile error - fix to give VLP16 support
+          uint8_t return_mode = pkt.data[1204];
+          uint8_t return_type;
+          switch (return_mode)
+          {
+            case RETURN_MODE_DUAL:
+              return_type = RETURN_TYPE::INVALID_RETURN;
+              break;
+            case RETURN_MODE_STRONGEST:
+              return_type = RETURN_TYPE::STRONGEST_RETURN;
+              break;
+            case RETURN_MODE_LAST:
+              return_type = RETURN_TYPE::LAST_RETURN;
+              break;
+            default:
+              return_type = RETURN_TYPE::INVALID_RETURN;
+          }
           if (is_invalid_distance) {
             data.addPoint(
-              x_coord, y_coord, z_coord, corrections.laser_ring, azimuth_corrected, 0, intensity,
+              x_coord, y_coord, z_coord, return_type, corrections.laser_ring, azimuth_corrected, 0, intensity,
               time_stamp);
           } else {
             data.addPoint(
-              x_coord, y_coord, z_coord, corrections.laser_ring, azimuth_corrected, distance,
+              x_coord, y_coord, z_coord, return_type, corrections.laser_ring, azimuth_corrected, distance,
               intensity, time_stamp);
           }
         }
@@ -566,8 +600,10 @@ void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataC
     float cos_rot_angle, sin_rot_angle;
     float xy_distance;
 
-    uint8_t laser_number, firing_order;
-    bool dual_return = (pkt.data[1204] == 57);
+    uint8_t laser_number, firing_order, return_mode;
+
+    return_mode = pkt.data[1204];
+    bool dual_return = (return_mode == RETURN_MODE_DUAL);
 
     for (int block = 0; block < BLOCKS_PER_PACKET - (4* dual_return); block++) {
       // cache block for use
@@ -626,7 +662,8 @@ void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataC
           // distance extraction
           tmp.bytes[0] = current_block.data[k];
           tmp.bytes[1] = current_block.data[k + 1];
-          if (tmp.bytes[0]==0 &&tmp.bytes[1]==0 ) //no laser beam return
+          // Do not process if there is no return, or in dual return mode and the first and last echos are the same
+          if ((tmp.bytes[0] == 0 && tmp.bytes[1] == 0) || (dual_return && block % 2 && raw->blocks[block - 1].data[k] == tmp.bytes[0] && raw->blocks[block - 1].data[k + 1] == tmp.bytes[1]))
           {
             continue;
           }
@@ -701,11 +738,40 @@ void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataC
 
               double time_stamp = block * 55.3 / 1000.0 / 1000.0 + j * 2.665 / 1000.0 / 1000.0 + rclcpp::Time(pkt.stamp).seconds();
 
+              // Determine return type
+              uint8_t return_type;
+              switch (return_mode) {
+                case RETURN_MODE_DUAL:
+                  if (block % 2)
+                  {
+                    return_type = RETURN_TYPE::FIRST_RETURN;
+                  }
+                  else
+                  {
+                    if (raw->blocks[block + 1].data[k] == tmp.bytes[0] && raw->blocks[block + 1].data[k + 1] == tmp.bytes[1])
+                    {
+                      return_type = RETURN_TYPE::ONLY_RETURN;
+                    }
+                    else
+                    {
+                      return_type = RETURN_TYPE::LAST_RETURN;
+                    }
+                  }
+                  break;
+                case RETURN_MODE_STRONGEST:
+                  return_type = RETURN_TYPE::STRONGEST_RETURN;
+                  break;
+                case RETURN_MODE_LAST:
+                  return_type = RETURN_TYPE::LAST_RETURN;
+                  break;
+                default:
+                  return_type = RETURN_TYPE::INVALID_RETURN;
+              }
               if (is_invalid_distance) {
-                data.addPoint(x_coord, y_coord, z_coord, corrections.laser_ring, azimuth_corrected, 0, intensity, time_stamp);
+                data.addPoint(x_coord, y_coord, z_coord, return_type, corrections.laser_ring, azimuth_corrected, 0, intensity, time_stamp);
               }
               else {
-                data.addPoint(x_coord, y_coord, z_coord, corrections.laser_ring, azimuth_corrected, distance, intensity, time_stamp);
+                data.addPoint(x_coord, y_coord, z_coord, return_type, corrections.laser_ring, azimuth_corrected, distance, intensity, time_stamp);
               }
             }
           }
