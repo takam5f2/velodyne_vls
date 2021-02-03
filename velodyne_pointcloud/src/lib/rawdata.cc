@@ -746,11 +746,17 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
                 case RETURN_MODE_DUAL:
                   if (block % 2)
                   {
+                    if ((raw->blocks[block - 1].data[k] == tmp.bytes[0] && raw->blocks[block - 1].data[k + 1] == tmp.bytes[1])
+                          || (raw->blocks[block - 1].data[k] == 0 && raw->blocks[block - 1].data[k + 1] == 0))
+                    {
+                      return_type = RETURN_TYPE::ONLY_RETURN;
+                    }
                     return_type = RETURN_TYPE::FIRST_RETURN;
                   }
                   else
                   {
-                    if (raw->blocks[block + 1].data[k] == tmp.bytes[0] && raw->blocks[block + 1].data[k + 1] == tmp.bytes[1])
+                    if ((raw->blocks[block + 1].data[k] == tmp.bytes[0] && raw->blocks[block + 1].data[k + 1] == tmp.bytes[1])
+                          || (raw->blocks[block + 1].data[k] == 0 && raw->blocks[block + 1].data[k + 1] == 0))
                     {
                       return_type = RETURN_TYPE::ONLY_RETURN;
                     }
