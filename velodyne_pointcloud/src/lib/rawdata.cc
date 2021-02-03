@@ -592,7 +592,8 @@ void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataC
     float x_coord, y_coord, z_coord;
     float distance, intensity;
     const raw_packet_t *raw = (const raw_packet_t *) &pkt.data[0];
-    union two_bytes tmp;
+    union two_bytes current_return;
+    union two_bytes other_return;
 
     // float time_diff_start_to_this_packet = (pkt.stamp - rclcpp::Time(scan_start_time).)toSecseconds
 
@@ -660,10 +661,17 @@ void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataC
       if ((config_.min_angle < config_.max_angle && azimuth >= config_.min_angle && azimuth <= config_.max_angle) || (config_.min_angle > config_.max_angle)) {
         for (int j = 0, k = 0; j < SCANS_PER_BLOCK; j++, k += RAW_SCAN_SIZE) {
           // distance extraction
-          tmp.bytes[0] = current_block.data[k];
-          tmp.bytes[1] = current_block.data[k + 1];
+          current_return.bytes[0] = current_block.data[k];
+          current_return.bytes[1] = current_block.data[k + 1];
+
+          if (dual_return)
+          {
+            other_return.bytes[0] = block % 2 ? raw->blocks[block - 1].data[k] : raw->blocks[block + 1].data[k];
+            other_return.bytes[1] = block % 2 ? raw->blocks[block - 1].data[k + 1] : raw->blocks[block + 1].data[k + 1];
+          }
           // Do not process if there is no return, or in dual return mode and the first and last echos are the same
-          if ((tmp.bytes[0] == 0 && tmp.bytes[1] == 0) || (dual_return && block % 2 && raw->blocks[block - 1].data[k] == tmp.bytes[0] && raw->blocks[block - 1].data[k + 1] == tmp.bytes[1]))
+          if ((current_return.bytes[0] == 0 && current_return.bytes[1] == 0)
+              || (dual_return && block % 2 && other_return.bytes[0] == current_return.bytes[0] && other_return.bytes[1] == current_return.bytes[1]))
           {
             continue;
           }
@@ -675,7 +683,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataC
 
             velodyne_pointcloud::LaserCorrection &corrections = calibration_.laser_corrections[laser_number];
 
-            distance = tmp.uint * VLP128_DISTANCE_RESOLUTION;
+            distance = current_return.uint * VLP128_DISTANCE_RESOLUTION;
             bool is_invalid_distance = false;
             if(distance == 0.0) {
                 is_invalid_distance = true;
@@ -742,26 +750,14 @@ void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataC
               uint8_t return_type;
               switch (return_mode) {
                 case RETURN_MODE_DUAL:
-                  if (block % 2)
+                  if ((other_return.bytes[0] == 0 && other_return.bytes[1] == 0)
+                      || (other_return.bytes[0] == current_return.bytes[0] && other_return.bytes[1] == current_return.bytes[1]))
                   {
-                    if ((raw->blocks[block - 1].data[k] == tmp.bytes[0] && raw->blocks[block - 1].data[k + 1] == tmp.bytes[1])
-                          || (raw->blocks[block - 1].data[k] == 0 && raw->blocks[block - 1].data[k + 1] == 0))
-                    {
-                      return_type = RETURN_TYPE::ONLY_RETURN;
-                    }
-                    return_type = RETURN_TYPE::FIRST_RETURN;
+                    return_type = RETURN_TYPE::ONLY_RETURN;
                   }
                   else
                   {
-                    if ((raw->blocks[block + 1].data[k] == tmp.bytes[0] && raw->blocks[block + 1].data[k + 1] == tmp.bytes[1])
-                          || (raw->blocks[block + 1].data[k] == 0 && raw->blocks[block + 1].data[k + 1] == 0))
-                    {
-                      return_type = RETURN_TYPE::ONLY_RETURN;
-                    }
-                    else
-                    {
-                      return_type = RETURN_TYPE::LAST_RETURN;
-                    }
+                    return_type = other_return.uint < current_return.uint ? RETURN_TYPE::LAST_RETURN : RETURN_TYPE::FIRST_RETURN;
                   }
                   break;
                 case RETURN_MODE_STRONGEST:
