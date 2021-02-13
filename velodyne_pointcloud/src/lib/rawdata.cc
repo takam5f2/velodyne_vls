@@ -342,16 +342,16 @@ void RawData::unpack(const velodyne_msgs::VelodynePacket & pkt, DataContainerBas
         switch (return_mode)
         {
           case RETURN_MODE_DUAL:
-            return_type = RETURN_TYPE::INVALID_RETURN;
+            return_type = RETURN_TYPE::INVALID;
             break;
           case RETURN_MODE_STRONGEST:
-            return_type = RETURN_TYPE::STRONGEST_RETURN;
+            return_type = RETURN_TYPE::SINGLE_STRONGEST;
             break;
           case RETURN_MODE_LAST:
-            return_type = RETURN_TYPE::LAST_RETURN;
+            return_type = RETURN_TYPE::SINGLE_LAST;
             break;
           default:
-            return_type = RETURN_TYPE::INVALID_RETURN;
+            return_type = RETURN_TYPE::INVALID;
         }
         if (is_invalid_distance) {
           data.addPoint(
@@ -553,16 +553,16 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
           switch (return_mode)
           {
             case RETURN_MODE_DUAL:
-              return_type = RETURN_TYPE::INVALID_RETURN;
+              return_type = RETURN_TYPE::INVALID;
               break;
             case RETURN_MODE_STRONGEST:
-              return_type = RETURN_TYPE::STRONGEST_RETURN;
+              return_type = RETURN_TYPE::SINGLE_STRONGEST;
               break;
             case RETURN_MODE_LAST:
-              return_type = RETURN_TYPE::LAST_RETURN;
+              return_type = RETURN_TYPE::SINGLE_LAST;
               break;
             default:
-              return_type = RETURN_TYPE::INVALID_RETURN;
+              return_type = RETURN_TYPE::INVALID;
           }
 
           if (is_invalid_distance) {
@@ -592,7 +592,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
     float azimuth_diff, azimuth_corrected_f;
     uint16_t azimuth, azimuth_next, azimuth_corrected;
     float x_coord, y_coord, z_coord;
-    float distance, intensity;
+    float distance, intensity, other_intensity;
     const raw_packet_t *raw = (const raw_packet_t *) &pkt.data[0];
     union two_bytes current_return;
     union two_bytes other_return;
@@ -670,6 +670,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
           {
             other_return.bytes[0] = block % 2 ? raw->blocks[block - 1].data[k] : raw->blocks[block + 1].data[k];
             other_return.bytes[1] = block % 2 ? raw->blocks[block - 1].data[k + 1] : raw->blocks[block + 1].data[k + 1];
+            other_intensity = block % 2 ? raw->blocks[block - 1].data[k + 2] : raw->blocks[block + 1].data[k + 2];
           }
           // Do not process if there is no return, or in dual return mode and the first and last echos are the same
           if ((current_return.bytes[0] == 0 && current_return.bytes[1] == 0)
@@ -755,21 +756,37 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
                   if ((other_return.bytes[0] == 0 && other_return.bytes[1] == 0)
                       || (other_return.bytes[0] == current_return.bytes[0] && other_return.bytes[1] == current_return.bytes[1]))
                   {
-                    return_type = RETURN_TYPE::ONLY_RETURN;
+                    return_type = RETURN_TYPE::DUAL_ONLY;
                   }
                   else
                   {
-                    return_type = other_return.uint < current_return.uint ? RETURN_TYPE::LAST_RETURN : RETURN_TYPE::FIRST_RETURN;
+                    //return_type = other_return.uint < current_return.uint ? RETURN_TYPE::LAST_RETURN : RETURN_TYPE::FIRST_RETURN;
+                    bool first = other_return.uint < current_return.uint ? 0 : 1;
+                    bool strongest = other_intensity < intensity ? 1 : 0;
+                    if (other_intensity == intensity)
+                    {
+                      strongest = first ? 0 : 1;
+                    }
+                    if (first && strongest)
+                      return_type = RETURN_TYPE::DUAL_STRONGEST_FIRST;
+                    else if (!first && strongest)
+                      return_type = RETURN_TYPE::DUAL_STRONGEST_LAST;
+                    else if (first && !strongest)
+                      return_type = RETURN_TYPE::DUAL_WEAK_FIRST;
+                    else if (!first && !strongest)
+                      return_type = RETURN_TYPE::DUAL_WEAK_LAST;
+                    else
+                      return_type = RETURN_TYPE::INVALID;
                   }
                   break;
                 case RETURN_MODE_STRONGEST:
-                  return_type = RETURN_TYPE::STRONGEST_RETURN;
+                  return_type = RETURN_TYPE::SINGLE_STRONGEST;
                   break;
                 case RETURN_MODE_LAST:
-                  return_type = RETURN_TYPE::LAST_RETURN;
+                  return_type = RETURN_TYPE::SINGLE_LAST;
                   break;
                 default:
-                  return_type = RETURN_TYPE::INVALID_RETURN;
+                  return_type = RETURN_TYPE::INVALID;
               }
               if (is_invalid_distance) {
                 data.addPoint(x_coord, y_coord, z_coord, return_type, corrections.laser_ring, azimuth_corrected, 0, intensity, time_stamp);

@@ -148,13 +148,15 @@ typedef struct raw_packet
 /** \brief Velodyne echo types */
 enum RETURN_TYPE
 {
-  INVALID_RETURN = 0,
-  STRONGEST_RETURN,
-  FIRST_RETURN,
-  LAST_RETURN,
-  ONLY_RETURN
+  INVALID = 0,
+  SINGLE_STRONGEST,
+  SINGLE_LAST,
+  DUAL_STRONGEST_FIRST,
+  DUAL_STRONGEST_LAST,
+  DUAL_WEAK_FIRST,
+  DUAL_WEAK_LAST,
+  DUAL_ONLY
 };
-
 
 /** \brief Velodyne data conversion class */
 class RawData
