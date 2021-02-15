@@ -20,54 +20,55 @@
 #include <deque>
 #include <string>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <tf2/convert.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 
-#include <sensor_msgs/PointCloud2.h>
-#include <visualization_msgs/MarkerArray.h>
-
-#include <dynamic_reconfigure/server.h>
-#include <velodyne_pointcloud/CloudNodeConfig.h>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <velodyne_msgs/msg/velodyne_scan.hpp>
 
 #include <velodyne_pointcloud/pointcloudXYZIRADT.h>
 #include <velodyne_pointcloud/rawdata.h>
 
 namespace velodyne_pointcloud
 {
-class Convert
+class Convert : public rclcpp::Node
 {
 public:
-  Convert(ros::NodeHandle node, ros::NodeHandle private_nh);
+  Convert(const rclcpp::NodeOptions & options);
   ~Convert() {}
 
 private:
-  void callback(velodyne_pointcloud::CloudNodeConfig & config, uint32_t level);
-  void processScan(const velodyne_msgs::VelodyneScan::ConstPtr & scanMsg);
-  visualization_msgs::MarkerArray createVelodyneModelMakerMsg(const std_msgs::Header & header);
+
+  /** \brief Parameter service callback */
+  rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+  void processScan(const velodyne_msgs::msg::VelodyneScan::SharedPtr scanMsg);
+  visualization_msgs::msg::MarkerArray createVelodyneModelMakerMsg(const std_msgs::msg::Header & header);
   bool getTransform(
     const std::string & target_frame, const std::string & source_frame,
     tf2::Transform * tf2_transform_ptr);
 
-  ros::Subscriber velodyne_scan_;
-  ros::Publisher velodyne_points_pub_;
-  ros::Publisher velodyne_points_ex_pub_;
-  ros::Publisher velodyne_points_invalid_near_pub_;
-  ros::Publisher velodyne_points_combined_ex_pub_;
-  ros::Publisher marker_array_pub_;
+  rclcpp::Subscription<velodyne_msgs::msg::VelodyneScan>::SharedPtr velodyne_scan_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_ex_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_invalid_near_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_combined_ex_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_array_pub_;
 
-  tf2_ros::Buffer tf2_buffer_;
-  tf2_ros::TransformListener tf2_listener_;
+  // tf2_ros::Buffer tf2_buffer_;
+  // tf2_ros::TransformListener tf2_listener_;
 
   // Buffer for overflow points
   velodyne_pointcloud::PointcloudXYZIRADT _overflow_buffer;
   /// Pointer to dynamic reconfigure service srv_
-  boost::shared_ptr<dynamic_reconfigure::Server<velodyne_pointcloud::CloudNodeConfig> > srv_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
-  boost::shared_ptr<velodyne_rawdata::RawData> data_;
+  std::shared_ptr<velodyne_rawdata::RawData> data_;
 
   int num_points_threshold_;
   std::vector<float> invalid_intensity_array_;
@@ -76,6 +77,10 @@ private:
   /// configuration parameters
   typedef struct
   {
+    double min_range;
+    double max_range;
+    double view_direction;
+    double view_width;
     int npackets;               ///< number of packets to combine
     double scan_phase;        ///< sensor phase (degrees)
     bool sensor_timestamp;      ///< flag on whether to use sensor (GPS) time or ROS receive time

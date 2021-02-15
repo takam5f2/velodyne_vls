@@ -45,8 +45,8 @@
 #include <fstream>
 
 #include <angles/angles.h>
-#include <ros/package.h>
-#include <ros/ros.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <velodyne_pointcloud/rawdata.h>
 
@@ -60,7 +60,8 @@ inline float SQR(float val) { return val * val; }
 //
 ////////////////////////////////////////////////////////////////////////
 
-RawData::RawData() {}
+RawData::RawData(rclcpp::Node* node_ptr): node_ptr_(node_ptr)
+ {}
 
 /** Update parameters: conversions and update */
 void RawData::setParameters(
@@ -104,26 +105,26 @@ double RawData::getMaxRange() const { return config_.max_range; }
 double RawData::getMinRange() const { return config_.min_range; }
 
 /** Set up for on-line operation. */
-int RawData::setup(ros::NodeHandle private_nh)
+int RawData::setup()
 {
   // get path to angles.config file for this device
-  if (!private_nh.getParam("calibration", config_.calibrationFile)) {
-    ROS_ERROR_STREAM("No calibration angles specified! Using test values!");
+  if (!node_ptr_->get_parameter("calibration", config_.calibrationFile)) {
+    RCLCPP_ERROR_STREAM(node_ptr_->get_logger(), "No calibration angles specified! Using test values!");
 
     // have to use something: grab unit test version as a default
-    std::string pkgPath = ros::package::getPath("velodyne_pointcloud");
+    std::string pkgPath = ament_index_cpp::get_package_share_directory("velodyne_pointcloud");
     config_.calibrationFile = pkgPath + "/params/64e_utexas.yaml";
   }
 
-  ROS_INFO_STREAM("correction angles: " << config_.calibrationFile);
+  RCLCPP_INFO_STREAM(node_ptr_->get_logger(), "correction angles: " << config_.calibrationFile);
 
   calibration_.read(config_.calibrationFile);
   if (!calibration_.initialized) {
-    ROS_ERROR_STREAM("Unable to open calibration file: " << config_.calibrationFile);
+    RCLCPP_ERROR_STREAM(node_ptr_->get_logger(), "Unable to open calibration file: " << config_.calibrationFile);
     return -1;
   }
 
-  ROS_INFO_STREAM("Number of lasers: " << calibration_.num_lasers << ".");
+  RCLCPP_INFO_STREAM(node_ptr_->get_logger(), "Number of lasers: " << calibration_.num_lasers << ".");
 
   // Set up cached values for sin and cos of all the possible headings
   for (uint16_t rot_index = 0; rot_index < ROTATION_MAX_UNITS; ++rot_index) {
@@ -144,16 +145,16 @@ int RawData::setupOffline(std::string calibration_file, double max_range_, doubl
 {
   config_.max_range = max_range_;
   config_.min_range = min_range_;
-  ROS_INFO_STREAM(
+  RCLCPP_INFO_STREAM(node_ptr_->get_logger(), 
     "data ranges to publish: [" << config_.min_range << ", " << config_.max_range << "]");
 
   config_.calibrationFile = calibration_file;
 
-  ROS_INFO_STREAM("correction angles: " << config_.calibrationFile);
+  RCLCPP_INFO_STREAM(node_ptr_->get_logger(), "correction angles: " << config_.calibrationFile);
 
   calibration_.read(config_.calibrationFile);
   if (!calibration_.initialized) {
-    ROS_ERROR_STREAM("Unable to open calibration file: " << config_.calibrationFile);
+    RCLCPP_ERROR_STREAM(node_ptr_->get_logger(), "Unable to open calibration file: " << config_.calibrationFile);
     return -1;
   }
 
@@ -176,10 +177,10 @@ int RawData::setupOffline(std::string calibration_file, double max_range_, doubl
    *  @param pkt raw packet to unpack
    *  @param pc shared pointer to point cloud (points are appended)
    */
-void RawData::unpack(const velodyne_msgs::VelodynePacket & pkt, DataContainerBase & data)
+void RawData::unpack(const velodyne_msgs::msg::VelodynePacket & pkt, DataContainerBase & data)
 {
   using velodyne_pointcloud::LaserCorrection;
-  ROS_DEBUG_STREAM("Received packet, time: " << pkt.stamp);
+  RCLCPP_DEBUG_STREAM(node_ptr_->get_logger(), "Received packet, time: " << rclcpp::Time(pkt.stamp).seconds());
 
   /** special parsing for the VLP16 **/
   if (calibration_.num_lasers == 16) {
@@ -334,7 +335,7 @@ void RawData::unpack(const velodyne_msgs::VelodynePacket & pkt, DataContainerBas
         intensity = (intensity > max_intensity) ? max_intensity : intensity;
 
         double time_stamp =
-          i * 55.296 / 1000.0 / 1000.0 + j * 2.304 / 1000.0 / 1000.0 + pkt.stamp.toSec();
+          i * 55.296 / 1000.0 / 1000.0 + j * 2.304 / 1000.0 / 1000.0 + rclcpp::Time(pkt.stamp).seconds();
         if (is_invalid_distance) {
           data.addPoint(
             x_coord, y_coord, z_coord, corrections.laser_ring, raw->blocks[i].rotation, 0,
@@ -354,7 +355,7 @@ void RawData::unpack(const velodyne_msgs::VelodynePacket & pkt, DataContainerBas
    *  @param pkt raw packet to unpack
    *  @param pc shared pointer to point cloud (points are appended)
    */
-void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContainerBase & data)
+void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket & pkt, DataContainerBase & data)
 {
   float azimuth;
   float azimuth_diff;
@@ -372,8 +373,8 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
     if (UPPER_BANK != raw->blocks[block].header) {
       // Do not flood the log with messages, only issue at most one
       // of these warnings per minute.
-      ROS_WARN_STREAM_THROTTLE(
-        60, "skipping invalid VLP-16 packet: block " << block << " header value is "
+      RCLCPP_WARN_STREAM_THROTTLE(node_ptr_->get_logger(), *node_ptr_->get_clock(), 
+        60000 /* ms */, "skipping invalid VLP-16 packet: block " << block << " header value is "
                                                      << raw->blocks[block].header);
       return;  // bad packet: skip the rest
     }
@@ -386,7 +387,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
       // // some packets contain an angle overflow where azimuth_diff < 0
       // if(raw_azimuth_diff < 0)//raw->blocks[block+1].rotation - raw->blocks[block].rotation < 0)
       //   {
-      //     ROS_WARN_STREAM_THROTTLE(60, "Packet containing angle overflow, first angle: " << raw->blocks[block].rotation << " second angle: " << raw->blocks[block+1].rotation);
+      //     RCLCPP_WARN_STREAM_THROTTLE(60, "Packet containing angle overflow, first angle: " << raw->blocks[block].rotation << " second angle: " << raw->blocks[block+1].rotation);
       //     // if last_azimuth_diff was not zero, we can assume that the velodyne's speed did not change very much and use the same difference
       //     if(last_azimuth_diff > 0){
       //       azimuth_diff = last_azimuth_diff;
@@ -527,7 +528,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
           intensity = (intensity > max_intensity) ? max_intensity : intensity;
 
           double time_stamp = (block * 2 + firing) * 55.296 / 1000.0 / 1000.0 +
-                              dsr * 2.304 / 1000.0 / 1000.0 + pkt.stamp.toSec();
+                              dsr * 2.304 / 1000.0 / 1000.0 + rclcpp::Time(pkt.stamp).seconds();
           if (is_invalid_distance) {
             data.addPoint(
               x_coord, y_coord, z_coord, corrections.laser_ring, azimuth_corrected, 0, intensity,
@@ -549,8 +550,8 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
    *  @param pkt raw packet to unpack
    *  @param pc shared pointer to point cloud (points are appended)
    */
-  // void RawData::unpack_vls128(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data, const ros::Time& scan_start_time) {
-  void RawData::unpack_vls128(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data) {
+  // void RawData::unpack_vls128(const velodyne_msgs::msg::VelodynePacket &pkt, DataContainerBase &data, const ros::Time& scan_start_time) {
+  void RawData::unpack_vls128(const velodyne_msgs::msg::VelodynePacket &pkt, DataContainerBase &data) {
     float last_azimuth_diff = 0;
     float azimuth_diff, azimuth_corrected_f;
     uint16_t azimuth, azimuth_next, azimuth_corrected;
@@ -559,7 +560,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
     const raw_packet_t *raw = (const raw_packet_t *) &pkt.data[0];
     union two_bytes tmp;
 
-    // float time_diff_start_to_this_packet = (pkt.stamp - scan_start_time).toSec();
+    // float time_diff_start_to_this_packet = (pkt.stamp - rclcpp::Time(scan_start_time).)toSecseconds
 
     float cos_vert_angle, sin_vert_angle, cos_rot_correction, sin_rot_correction;
     float cos_rot_angle, sin_rot_angle;
@@ -591,7 +592,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
           // ignore packets with mangled or otherwise different contents
           // Do not flood the log with messages, only issue at most one
           // of these warnings per minute.
-          ROS_WARN_STREAM_THROTTLE(60, "skipping invalid VLS-128 packet: block "
+          RCLCPP_WARN_STREAM_THROTTLE(node_ptr_->get_logger(), *node_ptr_->get_clock(), 60000 /* ms */, "skipping invalid VLS-128 packet: block "
                     << block << " header value is "
                     << raw->blocks[block].header);
           return; // bad packet: skip the rest
@@ -698,7 +699,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket & pkt, DataContai
               // if (timing_offsets.size())
               //   time = timing_offsets[block][j] + time_diff_start_to_this_packet;
 
-              double time_stamp = block * 55.3 / 1000.0 / 1000.0 + j * 2.665 / 1000.0 / 1000.0 + pkt.stamp.toSec();
+              double time_stamp = block * 55.3 / 1000.0 / 1000.0 + j * 2.665 / 1000.0 / 1000.0 + rclcpp::Time(pkt.stamp).seconds();
 
               if (is_invalid_distance) {
                 data.addPoint(x_coord, y_coord, z_coord, corrections.laser_ring, azimuth_corrected, 0, intensity, time_stamp);

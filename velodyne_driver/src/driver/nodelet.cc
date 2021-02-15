@@ -12,33 +12,36 @@
  */
 
 #include <string>
-#include <boost/thread.hpp>
+#include <thread>
 
-#include <ros/ros.h>
-#include <pluginlib/class_list_macros.h>
-#include <nodelet/nodelet.h>
+#include <rclcpp/rclcpp.hpp>
+// #include <pluginlib/class_list_macros.h>
+// #include <nodelet/nodelet.h>
 
 #include "driver.h"
 
 namespace velodyne_driver
 {
 
-class DriverNodelet: public nodelet::Nodelet
+class VelodyneDriver: public rclcpp::Node
 {
 public:
 
-  DriverNodelet():
+  VelodyneDriver(const rclcpp::NodeOptions & options)
+  : Node("velodyne_driver_node", options),
     running_(false)
-  {}
+  {
+    onInit();
+  }
 
-  ~DriverNodelet()
+  ~VelodyneDriver()
   {
     if (running_)
       {
-        NODELET_INFO("shutting down driver thread");
+        RCLCPP_INFO(this->get_logger(), "shutting down driver thread");
         running_ = false;
         deviceThread_->join();
-        NODELET_INFO("driver thread stopped");
+        RCLCPP_INFO(this->get_logger(), "driver thread stopped");
       }
   }
 
@@ -48,38 +51,37 @@ private:
   virtual void devicePoll(void);
 
   volatile bool running_;               ///< device thread is running
-  boost::shared_ptr<boost::thread> deviceThread_;
+  std::shared_ptr<std::thread> deviceThread_;
 
-  boost::shared_ptr<VelodyneDriver> dvr_; ///< driver implementation class
+  std::shared_ptr<VelodyneDriverCore> dvr_; ///< driver implementation class
 };
 
-void DriverNodelet::onInit()
+void VelodyneDriver::onInit()
 {
   // start the driver
-  dvr_.reset(new VelodyneDriver(getNodeHandle(), getPrivateNodeHandle()));
+  dvr_.reset(new VelodyneDriverCore(this));
 
   // spawn device poll thread
   running_ = true;
-  deviceThread_ = boost::shared_ptr< boost::thread >
-    (new boost::thread(boost::bind(&DriverNodelet::devicePoll, this)));
+  deviceThread_ = std::shared_ptr< std::thread >
+    (new std::thread(std::bind(&VelodyneDriver::devicePoll, this)));
 }
 
 /** @brief Device poll thread main loop. */
-void DriverNodelet::devicePoll()
+void VelodyneDriver::devicePoll()
 {
-  while(ros::ok())
-    {
-      // poll device until end of file
-      running_ = dvr_->poll();
-      if (!running_)
-        break;
-    }
+  while(rclcpp::ok())
+  {
+    // poll device until end of file
+    running_ = dvr_->poll();
+    if (!running_)
+      break;
+  }
   running_ = false;
 }
 
 } // namespace velodyne_driver
 
-// Register this plugin with pluginlib.  Names must match nodelet_velodyne.xml.
-//
-// parameters are: class type, base class type
-PLUGINLIB_EXPORT_CLASS(velodyne_driver::DriverNodelet, nodelet::Nodelet)
+#include <rclcpp_components/register_node_macro.hpp>
+
+RCLCPP_COMPONENTS_REGISTER_NODE(velodyne_driver::VelodyneDriver)

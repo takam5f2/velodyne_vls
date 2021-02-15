@@ -37,8 +37,8 @@
 #include <pcap.h>
 #include <netinet/in.h>
 
-#include <ros/ros.h>
-#include <velodyne_msgs/VelodynePacket.h>
+#include <rclcpp/rclcpp.hpp>
+#include <velodyne_msgs/msg/velodyne_packet.hpp>
 
 namespace velodyne_driver
 {
@@ -49,7 +49,7 @@ namespace velodyne_driver
   class Input
   {
   public:
-    Input(ros::NodeHandle private_nh, uint16_t port);
+    Input(rclcpp::Node * node_ptr, uint16_t port);
     virtual ~Input() {}
 
     /** @brief Read one Velodyne packet.
@@ -60,12 +60,12 @@ namespace velodyne_driver
      *          -1 if end of file
      *          > 0 if incomplete packet (is this possible?)
      */
-    virtual int getPacket(velodyne_msgs::VelodynePacket *pkt,
+    virtual int getPacket(velodyne_msgs::msg::VelodynePacket *pkt,
                           const double time_offset) = 0;
     virtual void setPacketRate( const double packet_rate ) = 0; // necessary for automatic adjustment of rpm
 
   protected:
-    ros::NodeHandle private_nh_;
+    rclcpp::Node * node_ptr_;
     uint16_t port_;
     std::string devip_str_;
     bool sensor_timestamp_;
@@ -75,11 +75,11 @@ namespace velodyne_driver
   class InputSocket: public Input
   {
   public:
-    InputSocket(ros::NodeHandle private_nh,
+    InputSocket(rclcpp::Node * node_ptr,
                 uint16_t port = DATA_PORT_NUMBER);
     virtual ~InputSocket();
 
-    virtual int getPacket(velodyne_msgs::VelodynePacket *pkt,
+    virtual int getPacket(velodyne_msgs::msg::VelodynePacket *pkt,
                           const double time_offset);
 
     void setDeviceIP( const std::string& ip );
@@ -99,7 +99,7 @@ namespace velodyne_driver
   class InputPCAP: public Input
   {
   public:
-    InputPCAP(ros::NodeHandle private_nh,
+    InputPCAP(rclcpp::Node * node_ptr,
               uint16_t port = DATA_PORT_NUMBER,
               double packet_rate = 0.0,
               std::string filename="",
@@ -108,13 +108,13 @@ namespace velodyne_driver
               double repeat_delay=0.0);
     virtual ~InputPCAP();
 
-    virtual int getPacket(velodyne_msgs::VelodynePacket *pkt,
+    virtual int getPacket(velodyne_msgs::msg::VelodynePacket *pkt,
                           const double time_offset);
     void setDeviceIP( const std::string& ip );
     void setPacketRate( const double packet_rate ); // necessary for automatic adjustment of rpm
   private:
-    ros::Rate packet_rate_;
-    ros::Duration *pwait_time;
+    rclcpp::Rate packet_rate_;
+    rclcpp::Duration *pwait_time;
     std::string filename_;
     pcap_t *pcap_;
     bpf_program pcap_packet_filter_;

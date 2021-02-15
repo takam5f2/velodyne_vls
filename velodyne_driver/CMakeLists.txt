@@ -1,15 +1,15 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(velodyne_driver)
 
-set(${PROJECT_NAME}_CATKIN_DEPS
-    diagnostic_updater
-    dynamic_reconfigure
-    nodelet
-    roscpp
-    tf
-    velodyne_msgs)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-parameter)
+endif()
 
-find_package(catkin REQUIRED COMPONENTS ${${PROJECT_NAME}_CATKIN_DEPS})
+find_package(ament_cmake_auto REQUIRED)
+ament_auto_find_build_dependencies()
 
 # This driver uses Boost threads
 find_package(Boost REQUIRED COMPONENTS thread)
@@ -17,62 +17,27 @@ find_package(Boost REQUIRED COMPONENTS thread)
 # libpcap provides no pkg-config or find_package module:
 set(libpcap_LIBRARIES -lpcap)
 
-include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
-
-# Generate dynamic_reconfigure server
-generate_dynamic_reconfigure_options(cfg/VelodyneNode.cfg)
-
-# objects needed by other ROS packages that depend on this one
-catkin_package(CATKIN_DEPENDS ${${PROJECT_NAME}_CATKIN_DEPS}
-               INCLUDE_DIRS include
-               LIBRARIES velodyne_input)
+include_directories(${Boost_INCLUDE_DIR})
+include_directories(include)
 
 # compile the driver and input library
 add_subdirectory(src/lib)
-add_subdirectory(src/driver)
+# add_subdirectory(src/driver)
 
-install(DIRECTORY include/${PROJECT_NAME}/
-        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
-install(FILES nodelet_velodyne.xml
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-install(DIRECTORY launch/
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
-install(PROGRAMS src/vdump
-        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+ament_auto_add_library(velodyne_driver SHARED
+  src/driver/driver.cc
+  src/driver/driver.h
+  src/driver/nodelet.cc
+  # src/driver/driver.cpp  
+)
+target_link_libraries(velodyne_driver velodyne_input)
 
-if (CATKIN_ENABLE_TESTING)
+rclcpp_components_register_node(velodyne_driver
+  PLUGIN "velodyne_driver::VelodyneDriver"
+  EXECUTABLE velodyne_driver_node
+)
 
-  # these dependencies are only needed for unit testing
-  find_package(roslaunch REQUIRED)
-  find_package(rostest REQUIRED)
-
-  # Download packet capture (PCAP) files containing test data.
-  # Store them in devel-space, so rostest can easily find them.
-  catkin_download_test_data(
-    ${PROJECT_NAME}_tests_class.pcap
-    http://download.ros.org/data/velodyne/class.pcap
-    DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_SHARE_DESTINATION}/tests
-    MD5 65808d25772101358a3719b451b3d015)
-  catkin_download_test_data(
-    ${PROJECT_NAME}_tests_32e.pcap
-    http://download.ros.org/data/velodyne/32e.pcap
-    DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_SHARE_DESTINATION}/tests
-    MD5 e41d02aac34f0967c03a5597e1d554a9)
-  catkin_download_test_data(
-    ${PROJECT_NAME}_tests_vlp16.pcap
-    http://download.ros.org/data/velodyne/vlp16.pcap
-    DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_SHARE_DESTINATION}/tests
-    MD5 f45c2bb1d7ee358274e423ea3b66fd73)
-
-  # unit tests
-  add_rostest(tests/pcap_node_hertz.test)
-  add_rostest(tests/pcap_nodelet_hertz.test)
-  add_rostest(tests/pcap_32e_node_hertz.test)
-  add_rostest(tests/pcap_32e_nodelet_hertz.test)
-  add_rostest(tests/pcap_vlp16_node_hertz.test)
-  add_rostest(tests/pcap_vlp16_nodelet_hertz.test)
-
-  # parse check all the launch/*.launch files
-  roslaunch_add_file_check(launch)
-
-endif (CATKIN_ENABLE_TESTING)
+ament_auto_package(
+  INSTALL_TO_SHARE
+  launch
+)

@@ -1,9 +1,34 @@
 Change history
 ==============
-1.3.1 (2018-03-28)
+
+2.1.0 (2020-07-10)
 ------------------
 
- * Added Telemetry Message Definition
+2.0.0 (2020-07-10)
+------------------
+* Adding linters to velodyne_msgs. (`#302 <https://github.com/ros-drivers/velodyne/issues/302>`_)
+* Update the documentation for ROS 2.
+* Merge pull request `#251 <https://github.com/ros-drivers/velodyne/issues/251>`_ from clalancette/dashing-devel3
+  ROS 2 Dashing port
+* Contributors: Andreas Klintberg, Chris Lalancette, Joshua Whitley, Sebastian Pütz
+
+1.5.2 (2019-01-28)
+------------------
+
+1.5.1 (2018-12-10)
+------------------
+
+1.5.0 (2018-10-19)
+------------------
+
+1.4.0 (2018-09-19)
+------------------
+* Updated all package.xmls to ver 2. Cleaned up catkin_lint errors.
+  All package.xml files are now compatible with version 2 of the
+  package.xml specification in REP 140. Removed some unnecessary
+  execute permissions on a few files. Fixed a missing test_depend.
+* Updated cut_at_specified_angle_feature with latest master version.
+* Contributors: Andre Volk, Joshua Whitley
 
 1.3.0 (2017-11-10)
 ------------------

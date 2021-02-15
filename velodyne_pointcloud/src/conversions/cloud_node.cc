@@ -11,7 +11,7 @@
 
 */
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include "velodyne_pointcloud/convert.h"
 
 /** Main node entry point. */
