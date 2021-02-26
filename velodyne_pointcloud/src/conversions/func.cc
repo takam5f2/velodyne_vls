@@ -177,7 +177,7 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
 
   auto twist_it = std::lower_bound(
     std::begin(twist_queue), std::end(twist_queue),
-    rclcpp::Time(input_pointcloud->points.front().time_stamp),
+    rclcpp::Time(input_pointcloud->points.front().time_stamp, RCL_ROS_TIME),
     [](const geometry_msgs::msg::TwistStamped & x, rclcpp::Time t) { return rclcpp::Time(x.header.stamp) < t; });
   twist_it = twist_it == std::end(twist_queue) ? std::end(twist_queue) - 1 : twist_it;
 
