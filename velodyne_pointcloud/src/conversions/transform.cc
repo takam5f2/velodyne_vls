@@ -96,7 +96,8 @@ Transform::Transform(const rclcpp::NodeOptions & options)
     config_.min_range, config_.max_range, config_.view_direction, config_.view_width);
 
   // advertise output point cloud (before subscribing to input data)
-  output_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points", 10);
+  output_ =
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points", rclcpp::SensorDataQoS());
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(

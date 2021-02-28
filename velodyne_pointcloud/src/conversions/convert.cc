@@ -134,12 +134,12 @@ Convert::Convert(const rclcpp::NodeOptions & options)
   }
 
   // advertise
-  velodyne_points_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points", 10);
-  velodyne_points_ex_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_ex", 10);
+  velodyne_points_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points", rclcpp::SensorDataQoS());
+  velodyne_points_ex_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_ex", rclcpp::SensorDataQoS());
   velodyne_points_invalid_near_pub_ =
-    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_invalid_near", 10);
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_invalid_near", rclcpp::SensorDataQoS());
   velodyne_points_combined_ex_pub_ =
-    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_combined_ex", 10);
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_combined_ex", rclcpp::SensorDataQoS());
   marker_array_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("velodyne_model_marker", 1);
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
@@ -149,7 +149,7 @@ Convert::Convert(const rclcpp::NodeOptions & options)
   // subscribe to VelodyneScan packets
   velodyne_scan_ =
     this->create_subscription<velodyne_msgs::msg::VelodyneScan>(
-    "velodyne_packets", rclcpp::QoS(10),
+    "velodyne_packets", rclcpp::SensorDataQoS(),
     std::bind(&Convert::processScan, this, std::placeholders::_1));
 }
 
