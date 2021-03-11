@@ -263,7 +263,8 @@ VelodyneDriverCore::VelodyneDriverCore(rclcpp::Node * node_ptr)
 
   // raw packet output topic
   output_ =
-    node_ptr_->create_publisher<velodyne_msgs::msg::VelodyneScan>("velodyne_packets", 10);
+    node_ptr_->create_publisher<velodyne_msgs::msg::VelodyneScan>(
+      "velodyne_packets", rclcpp::SensorDataQoS());
 }
 
 /** poll the device
