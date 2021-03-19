@@ -19,20 +19,23 @@ namespace velodyne_pointcloud
 /** @brief Constructor. */
 Interpolate::Interpolate(const rclcpp::NodeOptions & options)
 : Node("velodyne_interpolate_node", options),
- tf2_listener_(tf2_buffer_), 
+ tf2_listener_(tf2_buffer_),
  base_link_frame_("base_link")
 {
+  // qos
+  auto qos_sensor = rclcpp::SensorDataQoS().keep_last(10);
+
   // advertise
   velodyne_points_interpolate_pub_ =
-    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_interpolate", 10);
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_interpolate", qos_sensor);
   velodyne_points_interpolate_ex_pub_ =
-    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_interpolate_ex", 10);
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_interpolate_ex", qos_sensor);
 
   // subscribe
   twist_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
     "/vehicle/status/twist", 10, std::bind(&Interpolate::processTwist, this, std::placeholders::_1));
   velodyne_points_ex_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "velodyne_points_ex", 10, std::bind(&Interpolate::processPoints,this, std::placeholders::_1));
+    "velodyne_points_ex", qos_sensor, std::bind(&Interpolate::processPoints,this, std::placeholders::_1));
 }
 
 void Interpolate::processTwist(const geometry_msgs::msg::TwistStamped::SharedPtr twist_msg)
