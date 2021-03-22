@@ -340,7 +340,6 @@ bool VelodyneDriverCore::poll(void)
   // notify diagnostics that a message has been published, updating
   // its status
   diag_topic_->tick(scan->header.stamp);
-  diagnostics_.force_update();
 
   if (dump_file != "" && processed_packets > 1)                  // have PCAP file?
   {
