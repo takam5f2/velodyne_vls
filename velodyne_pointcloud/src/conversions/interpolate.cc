@@ -19,7 +19,7 @@ namespace velodyne_pointcloud
 /** @brief Constructor. */
 Interpolate::Interpolate(const rclcpp::NodeOptions & options)
 : Node("velodyne_interpolate_node", options),
- tf2_listener_(tf2_buffer_), 
+ tf2_listener_(tf2_buffer_),
  base_link_frame_("base_link")
 {
   // advertise
@@ -72,14 +72,14 @@ void Interpolate::processPoints(
 
   if (velodyne_points_interpolate_pub_->get_subscription_count() > 0) {
     const auto interpolate_points_xyzir = convert(interpolate_points_xyziradt);
-    sensor_msgs::msg::PointCloud2 ros_pc_msg;
-    pcl::toROSMsg(*interpolate_points_xyzir, ros_pc_msg);
-    velodyne_points_interpolate_pub_->publish(ros_pc_msg);
+    auto ros_pc_msg_ptr = std::make_unique<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*interpolate_points_xyzir, *ros_pc_msg_ptr);
+    velodyne_points_interpolate_pub_->publish(std::move(ros_pc_msg_ptr));
   }
   if (velodyne_points_interpolate_ex_pub_->get_subscription_count() > 0) {
-    sensor_msgs::msg::PointCloud2 ros_pc_msg;
-    pcl::toROSMsg(*interpolate_points_xyziradt, ros_pc_msg);
-    velodyne_points_interpolate_ex_pub_->publish(ros_pc_msg);
+    auto ros_pc_msg_ptr = std::make_unique<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*interpolate_points_xyziradt, *ros_pc_msg_ptr);
+    velodyne_points_interpolate_ex_pub_->publish(std::move(ros_pc_msg_ptr));
   }
 }
 
