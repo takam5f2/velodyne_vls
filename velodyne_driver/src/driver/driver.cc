@@ -224,6 +224,12 @@ VelodyneDriverCore::VelodyneDriverCore(rclcpp::Node * node_ptr)
   config_.scan_phase = node_ptr_->get_parameter("scan_phase").as_double();
   RCLCPP_INFO_STREAM(node_ptr_->get_logger(), "Scan start/end will be at a phase of " << config_.scan_phase  << " degrees");
 
+  config_.time_offset = node_ptr_->declare_parameter("time_offset", 0.0);
+  config_.time_offset = node_ptr_->get_parameter("time_offset").as_double();
+  RCLCPP_INFO_STREAM(
+    node_ptr_->get_logger(),
+    "time in seconds added to each velodyne time stamp " << config_.time_offset  << " s");
+
   dump_file = node_ptr_->declare_parameter("pcap", std::string(""));
 
   int udp_port;
