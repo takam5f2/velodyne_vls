@@ -28,11 +28,16 @@ Interpolate::Interpolate(const rclcpp::NodeOptions & options)
   velodyne_points_interpolate_ex_pub_ =
     this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_interpolate_ex", rclcpp::SensorDataQoS());
 
+  interpolate_callback_group_ = this->create_callback_group(
+    rclcpp::CallbackGroupType::MutuallyExclusive, true);
+  auto subscriber_option = rclcpp::SubscriptionOptions();
+  subscriber_option.callback_group = interpolate_callback_group_;
   // subscribe
   twist_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
     "/vehicle/status/twist", 10, std::bind(&Interpolate::processTwist, this, std::placeholders::_1));
   velodyne_points_ex_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "velodyne_points_ex", rclcpp::SensorDataQoS(), std::bind(&Interpolate::processPoints,this, std::placeholders::_1));
+    "velodyne_points_ex", rclcpp::SensorDataQoS(), std::bind(&Interpolate::processPoints,this, std::placeholders::_1),
+    subscriber_option);
 }
 
 void Interpolate::processTwist(const geometry_msgs::msg::TwistStamped::SharedPtr twist_msg)

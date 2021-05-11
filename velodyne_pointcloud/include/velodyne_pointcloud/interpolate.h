@@ -29,7 +29,7 @@
 
 namespace velodyne_pointcloud
 {
-class Interpolate : public rclcpp::Node 
+class Interpolate : public rclcpp::Node
 {
 public:
   Interpolate(const rclcpp::NodeOptions & options);
@@ -50,6 +50,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr twist_sub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_interpolate_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_interpolate_ex_pub_;
+  rclcpp::CallbackGroup::SharedPtr interpolate_callback_group_;
 
   tf2::BufferCore tf2_buffer_;
   tf2_ros::TransformListener tf2_listener_;
