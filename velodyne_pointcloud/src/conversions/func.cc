@@ -173,6 +173,7 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
 
   float theta = 0;
   float x = 0, y = 0;
+  double prev_time_stamp = input_pointcloud->points.front().time_stamp;
 
   auto twist_it = std::lower_bound(
     std::begin(twist_queue), std::end(twist_queue),
@@ -196,7 +197,6 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
       w = 0;
     }
 
-    static double prev_time_stamp = p.time_stamp;
     const float time_offset = static_cast<float>(p.time_stamp - prev_time_stamp);
 
     tf2::Vector3 sensorTF_point(p.x, p.y, p.z);
