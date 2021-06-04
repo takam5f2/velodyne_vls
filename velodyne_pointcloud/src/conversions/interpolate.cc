@@ -29,7 +29,7 @@ Interpolate::Interpolate(const rclcpp::NodeOptions & options)
     this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_interpolate_ex", rclcpp::SensorDataQoS());
 
   interpolate_callback_group_ = this->create_callback_group(
-    rclcpp::CallbackGroupType::MutuallyExclusive);
+    rclcpp::CallbackGroupType::MutuallyExclusive, true);
   auto subscriber_option = rclcpp::SubscriptionOptions();
   subscriber_option.callback_group = interpolate_callback_group_;
   // subscribe
