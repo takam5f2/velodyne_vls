@@ -229,6 +229,7 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate(
     tmp_p.ring = p.ring;
     tmp_p.azimuth = p.azimuth;
     tmp_p.distance = p.distance;
+    tmp_p.return_type = p.return_type;
     tmp_p.time_stamp = p.time_stamp;
     output_pointcloud->points.push_back(tmp_p);
 
