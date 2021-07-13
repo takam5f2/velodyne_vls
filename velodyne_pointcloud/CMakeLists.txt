@@ -37,18 +37,17 @@ if(NOT ${YAML_CPP_VERSION} VERSION_LESS "0.5")
   add_definitions(-DHAVE_NEW_YAMLCPP)
 endif(NOT ${YAML_CPP_VERSION} VERSION_LESS "0.5")
 
-include_directories(
+# add_subdirectory(src/lib)
+ament_auto_add_library(velodyne_rawdata SHARED src/lib/rawdata.cc src/lib/calibration.cc)
+target_include_directories(velodyne_rawdata PRIVATE
   ${OpenCV_INCLUDE_DIRS}
   ${PCL_COMMON_INCLUDE_DIRS}
 )
 
-# add_subdirectory(src/lib)
-ament_auto_add_library(velodyne_rawdata SHARED src/lib/rawdata.cc src/lib/calibration.cc)
-
 ament_auto_add_library(cloud_nodelet SHARED
-  src/conversions/convert.cc 
-  src/conversions/pointcloudXYZIR.cc 
-  src/conversions/pointcloudXYZIRADT.cc 
+  src/conversions/convert.cc
+  src/conversions/pointcloudXYZIR.cc
+  src/conversions/pointcloudXYZIRADT.cc
   src/conversions/func.cc
 )
 target_link_libraries(cloud_nodelet velodyne_rawdata ${YAML_CPP_LIBRARIES} ${OpenCV_LIBS})
