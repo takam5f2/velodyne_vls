@@ -81,6 +81,8 @@ private:
     bool sensor_timestamp;      ///< flag on whether to use sensor (GPS) time or ROS receive time
   } Config;
   Config config_;
+
+  velodyne_pointcloud::VelodyneImplementType velodyne_convert_implement_type_;
 };
 
 }  // namespace velodyne_pointcloud

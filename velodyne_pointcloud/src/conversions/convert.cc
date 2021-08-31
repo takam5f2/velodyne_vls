@@ -35,6 +35,10 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh)
 {
   ROS_INFO("This node is only tested for VLP16, VLP32C, and VLS128. Use other models at your own risk.");
 
+  int velodyne_convert_implement_type_tmp = 0;
+  private_nh.getParam ("velodyne_convert_implement_type", velodyne_convert_implement_type_tmp);
+  velodyne_convert_implement_type_ = static_cast<velodyne_pointcloud::VelodyneImplementType>(velodyne_convert_implement_type_tmp);
+
   data_->setup(private_nh);
 
   private_nh.getParam("num_points_threshold", num_points_threshold_);
@@ -103,7 +107,8 @@ void Convert::processScan(const velodyne_msgs::VelodyneScan::ConstPtr & scanMsg)
     _overflow_buffer.pc->height = 1;
 
     for (size_t i = 0; i < scanMsg->packets.size(); ++i) {
-      data_->unpack(scanMsg->packets[i], scan_points_xyziradt);
+      // data_->unpack(scanMsg->packets[i], scan_points_xyziradt);
+      data_->unpack(scanMsg->packets[i], scan_points_xyziradt, velodyne_convert_implement_type_);
     }
     // Remove overflow points and add to overflow buffer for next scan
     int phase = (uint16_t)round(config_.scan_phase*100);
@@ -141,7 +146,8 @@ void Convert::processScan(const velodyne_msgs::VelodyneScan::ConstPtr & scanMsg)
     velodyne_points_ex_pub_.getNumSubscribers() > 0 ||
     velodyne_points_combined_ex_pub_.getNumSubscribers() > 0) {
     valid_points_xyziradt =
-      extractValidPoints(scan_points_xyziradt.pc, data_->getMinRange(), data_->getMaxRange());
+      // extractValidPoints(scan_points_xyziradt.pc, data_->getMinRange(), data_->getMaxRange());
+      extractValidPoints(scan_points_xyziradt.pc, data_->getMinRange(), data_->getMaxRange(), velodyne_convert_implement_type_);
     if (velodyne_points_pub_.getNumSubscribers() > 0) {
       const auto valid_points_xyzir = convert(valid_points_xyziradt);
       velodyne_points_pub_.publish(valid_points_xyzir);
@@ -157,9 +163,14 @@ void Convert::processScan(const velodyne_msgs::VelodyneScan::ConstPtr & scanMsg)
     velodyne_points_invalid_near_pub_.getNumSubscribers() > 0 ||
     velodyne_points_combined_ex_pub_.getNumSubscribers() > 0) {
     const size_t num_lasers = data_->getNumLasers();
-    const auto sorted_invalid_points_xyziradt = sortZeroIndex(scan_points_xyziradt.pc, num_lasers);
+    // const auto sorted_invalid_points_xyziradt = sortZeroIndex(scan_points_xyziradt.pc, num_lasers);
+    const auto sorted_invalid_points_xyziradt =
+      sortZeroIndex(scan_points_xyziradt.pc, num_lasers, velodyne_convert_implement_type_);
+    // invalid_near_points_filtered_xyziradt = extractInvalidNearPointsFiltered(
+    //   sorted_invalid_points_xyziradt, invalid_intensity_array_, num_lasers, num_points_threshold_);
     invalid_near_points_filtered_xyziradt = extractInvalidNearPointsFiltered(
-      sorted_invalid_points_xyziradt, invalid_intensity_array_, num_lasers, num_points_threshold_);
+      sorted_invalid_points_xyziradt, invalid_intensity_array_, num_lasers,
+      num_points_threshold_, velodyne_convert_implement_type_);
     if (velodyne_points_invalid_near_pub_.getNumSubscribers() > 0) {
       const auto invalid_near_points_filtered_xyzir =
         convert(invalid_near_points_filtered_xyziradt);

@@ -51,6 +51,9 @@
 
 #include <velodyne_pointcloud/datacontainerbase.h>
 
+#include <half.hpp>
+#include <libfixmath/fixmath.h>
+
 namespace velodyne_rawdata
 {
 // Shorthand typedefs for point cloud representations
@@ -175,6 +178,10 @@ public:
 
   void unpack(const velodyne_msgs::VelodynePacket & pkt, DataContainerBase & data);
 
+  void unpack(
+    const velodyne_msgs::VelodynePacket & pkt, DataContainerBase & data,
+    velodyne_pointcloud::VelodyneImplementType impl_type);
+
   void setParameters(double min_range, double max_range, double view_direction, double view_width);
 
   int scansPerPacket() const;
@@ -212,6 +219,19 @@ private:
 
   /** add private function to handle the VLS128 **/
   void unpack_vls128(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data);
+
+  void unpack_vls128(
+    const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data,
+    velodyne_pointcloud::VelodyneImplementType impl_type);
+
+  /** add private function to handle the VLS128 with single precision **/
+  void unpack_vls128_single_precision(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data);
+
+  /** add private function to handle the VLS128 with half precision **/
+  void unpack_vls128_half_precision(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data);
+
+  /** add private function to handle the VLS128 with fixed-point(16.16) precision **/
+  void unpack_vls128_fixed_16_16_precision(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data);
 
   /** in-line test whether a point is in range */
   bool pointInRange(float range)

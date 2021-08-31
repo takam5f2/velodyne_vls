@@ -21,6 +21,15 @@
 
 namespace velodyne_pointcloud
 {
+/** \brief implementation type option */
+enum class VelodyneImplementType
+{
+  ORIGINAL_FILTER = 0,
+  SINGLE_PRECISION = 1,
+  HALF_PRECISION = 2,
+  FIXED_POINT_16_16 = 3
+};
+
 struct PointXYZIR
 {
   PCL_ADD_POINT4D;

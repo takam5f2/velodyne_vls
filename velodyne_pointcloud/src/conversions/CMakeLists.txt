@@ -1,6 +1,7 @@
 add_executable(cloud_node cloud_node.cc convert.cc pointcloudXYZIR.cc pointcloudXYZIRADT.cc func.cc)
 add_dependencies(cloud_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(cloud_node velodyne_rawdata
+                      libfixmath.a
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${OpenCV_LIBS})
 install(TARGETS cloud_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -8,6 +9,7 @@ install(TARGETS cloud_node
 add_library(cloud_nodelet cloud_nodelet.cc convert.cc pointcloudXYZIR.cc pointcloudXYZIRADT.cc func.cc)
 add_dependencies(cloud_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(cloud_nodelet velodyne_rawdata
+                      libfixmath.a
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${OpenCV_LIBS})
 install(TARGETS cloud_nodelet
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
@@ -17,6 +19,7 @@ install(TARGETS cloud_nodelet
 add_executable(interpolate_node interpolate_node.cc interpolate.cc pointcloudXYZIR.cc pointcloudXYZIRADT.cc func.cc)
 add_dependencies(interpolate_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(interpolate_node
+                      libfixmath.a
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${OpenCV_LIBS})
 install(TARGETS interpolate_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -24,6 +27,7 @@ install(TARGETS interpolate_node
 add_library(interpolate_nodelet interpolate_nodelet.cc interpolate.cc pointcloudXYZIR.cc pointcloudXYZIRADT.cc func.cc)
 add_dependencies(interpolate_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(interpolate_nodelet
+                      libfixmath.a
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${OpenCV_LIBS})
 install(TARGETS interpolate_nodelet
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}

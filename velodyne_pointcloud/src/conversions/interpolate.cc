@@ -22,6 +22,10 @@ namespace velodyne_pointcloud
 Interpolate::Interpolate(ros::NodeHandle node, ros::NodeHandle private_nh)
 : tf2_listener_(tf2_buffer_), base_link_frame_("base_link")
 {
+  int velodyne_interpolate_implement_type_tmp = 0;
+  private_nh.getParam ("velodyne_interpolate_implement_type", velodyne_interpolate_implement_type_tmp);
+  velodyne_interpolate_implement_type_ = static_cast<velodyne_pointcloud::VelodyneImplementType>(velodyne_interpolate_implement_type_tmp);
+
   // advertise
   velodyne_points_interpolate_pub_ =
     node.advertise<sensor_msgs::PointCloud2>("velodyne_points_interpolate", 10);
@@ -66,7 +70,17 @@ void Interpolate::processPoints(
     new pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>);
   tf2::Transform tf2_base_link_to_sensor;
   getTransform(points_xyziradt->header.frame_id, base_link_frame_, &tf2_base_link_to_sensor);
-  interpolate_points_xyziradt = interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor);
+  // interpolate_points_xyziradt = interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor);
+  if (points_xyziradt->header.seq == 50) {
+    interpolate_points_xyziradt =
+      interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor, velodyne_pointcloud::VelodyneImplementType::SINGLE_PRECISION);
+    interpolate_points_xyziradt =
+      interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor, velodyne_pointcloud::VelodyneImplementType::FIXED_POINT_16_16);
+  }
+  else {
+    interpolate_points_xyziradt =
+      interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor, velodyne_interpolate_implement_type_);
+  }
 
   if (velodyne_points_interpolate_pub_.getNumSubscribers() > 0) {
     const auto interpolate_points_xyzir = convert(interpolate_points_xyziradt);
@@ -83,7 +97,8 @@ bool Interpolate::getTransform(
 {
   if (target_frame == source_frame) {
     tf2_transform_ptr->setOrigin(tf2::Vector3(0, 0, 0));
-    tf2_transform_ptr->setRotation(tf2::Quaternion(0, 0, 0, 1));
+    // tf2_transform_ptr->setRotation(tf2::Quaternion(0, 0, 0, 1));
+    setTFTransformRotation(*tf2_transform_ptr, tf2::Quaternion(0, 0, 0, 1), velodyne_interpolate_implement_type_);
     return true;
   }
 
@@ -96,7 +111,8 @@ bool Interpolate::getTransform(
     ROS_ERROR("Please publish TF %s to %s", target_frame.c_str(), source_frame.c_str());
 
     tf2_transform_ptr->setOrigin(tf2::Vector3(0, 0, 0));
-    tf2_transform_ptr->setRotation(tf2::Quaternion(0, 0, 0, 1));
+    // tf2_transform_ptr->setRotation(tf2::Quaternion(0, 0, 0, 1));
+    setTFTransformRotation(*tf2_transform_ptr, tf2::Quaternion(0, 0, 0, 1), velodyne_interpolate_implement_type_);
     return false;
   }
   return true;

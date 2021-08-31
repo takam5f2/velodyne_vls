@@ -58,6 +58,8 @@ private:
   std::deque<geometry_msgs::TwistStamped> twist_queue_;
 
   std::string base_link_frame_;
+
+  velodyne_pointcloud::VelodyneImplementType velodyne_interpolate_implement_type_;
 };
 
 }  // namespace velodyne_pointcloud
