@@ -71,16 +71,8 @@ void Interpolate::processPoints(
   tf2::Transform tf2_base_link_to_sensor;
   getTransform(points_xyziradt->header.frame_id, base_link_frame_, &tf2_base_link_to_sensor);
   // interpolate_points_xyziradt = interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor);
-  if (points_xyziradt->header.seq == 50) {
-    interpolate_points_xyziradt =
-      interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor, velodyne_pointcloud::VelodyneImplementType::SINGLE_PRECISION);
-    interpolate_points_xyziradt =
-      interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor, velodyne_pointcloud::VelodyneImplementType::FIXED_POINT_16_16);
-  }
-  else {
-    interpolate_points_xyziradt =
-      interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor, velodyne_interpolate_implement_type_);
-  }
+  interpolate_points_xyziradt =
+    interpolate(points_xyziradt, twist_queue_, tf2_base_link_to_sensor, velodyne_interpolate_implement_type_);
 
   if (velodyne_points_interpolate_pub_.getNumSubscribers() > 0) {
     const auto interpolate_points_xyzir = convert(interpolate_points_xyziradt);

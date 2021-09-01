@@ -526,8 +526,6 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate_single_prec
     sensorTF_trans_point = multiplyTFTransformAndVector(tf2_base_link_to_sensor, base_linkTF_trans_point);
 
     velodyne_pointcloud::PointXYZIRADT tmp_p;
-    // TODO:削除
-    std::cout << "[esol:single]" << sensorTF_trans_point.x << ", " << sensorTF_trans_point.y << ", " << sensorTF_trans_point.z << std::endl;
     tmp_p.x = sensorTF_trans_point.x;
     tmp_p.y = sensorTF_trans_point.y;
     tmp_p.z = sensorTF_trans_point.z;
@@ -682,7 +680,7 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate_fixed_16_16
     }
 
     static double prev_time_stamp = p.time_stamp;
-    const fix16_t time_offset = fix16_from_dbl(p.time_stamp - prev_time_stamp);
+    const fix16_t time_offset = fix16_from_dbl((p.time_stamp - prev_time_stamp) * 100000.0);
 
     // tf2::Vector3 sensorTF_point(p.x, p.y, p.z);
     VelodyneVector3fx sensorTF_point(
@@ -702,7 +700,7 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate_fixed_16_16
     y = fix16_add(y, fix16_mul(dis, fix16_sin(theta)));
 
     tf2::Transform baselinkTF_odom;
-    baselinkTF_odom.setOrigin(tf2::Vector3(fix16_to_float(x), fix16_to_float(y), 0));
+    baselinkTF_odom.setOrigin(tf2::Vector3((float)(fix16_to_dbl(x) / 100000.0), (float)(fix16_to_dbl(y) / 100000.0), 0));
     // baselinkTF_odom.setRotation(baselink_quat);
     setTFTransformRotation(baselinkTF_odom, baselink_quat,
       velodyne_pointcloud::VelodyneImplementType::FIXED_POINT_16_16);
@@ -727,8 +725,6 @@ pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate_fixed_16_16
     tmp_p.distance = p.distance;
     tmp_p.time_stamp = p.time_stamp;
     output_pointcloud->points.push_back(tmp_p);
-    // TODO:削除
-    std::cout << "[esol:fixed]" << fix16_to_dbl(tmp_p.x) << ", " << fix16_to_dbl(tmp_p.y) << ", " << fix16_to_dbl(tmp_p.z) << std::endl;
 
     prev_time_stamp = p.time_stamp;
   }
@@ -924,9 +920,9 @@ VelodyneVector3fx multiplyTFTransformAndVector(
 
   const tf2::Matrix3x3 basis = transform.getBasis();
   const tf2::Vector3 origin = transform.getOrigin();
-  ret_val.x = dot(basis[0], vector) + fix16_from_dbl(origin.x());
-  ret_val.y = dot(basis[1], vector) + fix16_from_dbl(origin.y());
-  ret_val.z = dot(basis[2], vector) + fix16_from_dbl(origin.z());
+  ret_val.x = fix16_add(dot(basis[0], vector), fix16_from_dbl(origin.x()));
+  ret_val.y = fix16_add(dot(basis[1], vector), fix16_from_dbl(origin.y()));
+  ret_val.z = fix16_add(dot(basis[2], vector), fix16_from_dbl(origin.z()));
 
   return ret_val;
 }
@@ -968,29 +964,21 @@ void setTFQuaternionRPY(
 }
 
 void setTFQuaternionRPY(
-  tf2::Quaternion & quaternion, fix16_t roll, fix16_t pitch, fix16_t yaw)
+  tf2::Quaternion & quaternion, fix16_t roll_mega, fix16_t pitch_mega, fix16_t yaw_mega)
 {
-  fix16_t halfYaw = yaw * fix16_from_float(0.5);
-  fix16_t halfPitch = pitch * fix16_from_float(0.5);
-  fix16_t halfRoll = roll * fix16_from_float(0.5);
-  fix16_t cosYaw = fix16_cos(halfYaw);
-  fix16_t sinYaw = fix16_sin(halfYaw);
-  fix16_t cosPitch = fix16_cos(halfPitch);
-  fix16_t sinPitch = fix16_sin(halfPitch);
-  fix16_t cosRoll = fix16_cos(halfRoll);
-  fix16_t sinRoll = fix16_sin(halfRoll);
-  fix16_t sinRollcosPitch = fix16_mul(sinRoll, cosPitch);
-  fix16_t cosRollsinPitch = fix16_mul(cosRoll, sinPitch);
-  fix16_t cosRollcosPitch = fix16_mul(cosRoll, cosPitch);
-  fix16_t sinRollsinPitch = fix16_mul(sinRoll, sinPitch);
-  fix16_t x = fix16_sub(fix16_mul(sinRollcosPitch, cosYaw), fix16_mul(cosRollsinPitch, sinYaw));
-  fix16_t y = fix16_add(fix16_mul(cosRollsinPitch, cosYaw), fix16_mul(sinRollcosPitch, sinYaw));
-  fix16_t z = fix16_sub(fix16_mul(cosRollcosPitch, sinYaw), fix16_mul(sinRollsinPitch, cosYaw));
-  fix16_t w = fix16_add(fix16_mul(cosRollcosPitch, cosYaw), fix16_mul(sinRollsinPitch, sinYaw));
-  quaternion.setValue(fix16_to_dbl(x), //x
-                      fix16_to_dbl(y), //y
-                      fix16_to_dbl(z), //z
-                      fix16_to_dbl(w)); //formerly yzx
+  fix16_t halfYaw = fix16_mul(yaw_mega, fix16_from_float(0.5));
+  fix16_t halfPitch = fix16_mul(pitch_mega, fix16_from_float(0.5));
+  fix16_t halfRoll = fix16_mul(roll_mega, fix16_from_float(0.5));
+  float cosYaw = std::cos(fix16_to_float(halfYaw) / 100000.0f);
+  float sinYaw = std::sin(fix16_to_float(halfYaw) / 100000.0f);
+  float cosPitch = std::cos(fix16_to_float(halfPitch) / 100000.0f);
+  float sinPitch = std::sin(fix16_to_float(halfPitch) / 100000.0f);
+  float cosRoll = std::cos(fix16_to_float(halfRoll) / 100000.0f);
+  float sinRoll = std::sin(fix16_to_float(halfRoll) / 100000.0f);
+  quaternion.setValue(sinRoll * cosPitch * cosYaw - cosRoll * sinPitch * sinYaw, //x
+                      cosRoll * sinPitch * cosYaw + sinRoll * cosPitch * sinYaw, //y
+                      cosRoll * cosPitch * sinYaw - sinRoll * sinPitch * cosYaw, //z
+                      cosRoll * cosPitch * cosYaw + sinRoll * sinPitch * sinYaw); //formerly yzx
 }
 
 void setTFTransformRotation(
@@ -1044,10 +1032,6 @@ void setTFTransformRotation(
       basis.setValue(double(1.0) - fix16_to_dbl(fix16_add(yy, zz)), fix16_to_dbl(fix16_sub(xy, wz)), fix16_to_dbl(fix16_add(xz, wy)),
         fix16_to_dbl(fix16_add(xy, wz)), double(1.0) - fix16_to_dbl(fix16_add(xx, zz)), fix16_to_dbl(fix16_sub(yz, wx)),
         fix16_to_dbl(fix16_sub(xz, wy)), fix16_to_dbl(fix16_add(yz, wx)), double(1.0) - fix16_to_dbl(fix16_add(xx, yy)));
-      basis = transform.getBasis();
-      std::cout << "[esol:fixed]basis:" << std::endl << basis.getRow(0)[0] << ", " << basis.getRow(0)[1] << ", " << basis.getRow(0)[2] << std::endl
-                                                     << basis.getRow(1)[0] << ", " << basis.getRow(1)[1] << ", " << basis.getRow(1)[2] << std::endl
-                                                     << basis.getRow(2)[0] << ", " << basis.getRow(2)[1] << ", " << basis.getRow(2)[2] << std::endl;
     }
     break;
     case velodyne_pointcloud::VelodyneImplementType::SINGLE_PRECISION:
@@ -1064,10 +1048,7 @@ void setTFTransformRotation(
       basis.setValue(double(1.0) - (yy + zz), xy - wz, xz + wy,
         xy + wz, double(1.0) - (xx + zz), yz - wx,
         xz - wy, yz + wx, double(1.0) - (xx + yy));
-      basis = transform.getBasis();
-      std::cout << "[esol:single]basis:" << std::endl << basis.getRow(0)[0] << ", " << basis.getRow(0)[1] << ", " << basis.getRow(0)[2] << std::endl
-                                                     << basis.getRow(1)[0] << ", " << basis.getRow(1)[1] << ", " << basis.getRow(1)[2] << std::endl
-                                                     << basis.getRow(2)[0] << ", " << basis.getRow(2)[1] << ", " << basis.getRow(2)[2] << std::endl;    }
+    }
     break;
   }
 }
