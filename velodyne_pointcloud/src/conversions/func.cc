@@ -964,11 +964,11 @@ void setTFQuaternionRPY(
 }
 
 void setTFQuaternionRPY(
-  tf2::Quaternion & quaternion, fix16_t roll_mega, fix16_t pitch_mega, fix16_t yaw_mega)
+  tf2::Quaternion & quaternion, fix16_t roll, fix16_t pitch, fix16_t yaw)
 {
-  fix16_t halfYaw = fix16_mul(yaw_mega, fix16_from_float(0.5));
-  fix16_t halfPitch = fix16_mul(pitch_mega, fix16_from_float(0.5));
-  fix16_t halfRoll = fix16_mul(roll_mega, fix16_from_float(0.5));
+  fix16_t halfYaw = fix16_mul(yaw, fix16_from_float(0.5));
+  fix16_t halfPitch = fix16_mul(pitch, fix16_from_float(0.5));
+  fix16_t halfRoll = fix16_mul(roll, fix16_from_float(0.5));
   float cosYaw = std::cos(fix16_to_float(halfYaw) / 100000.0f);
   float sinYaw = std::sin(fix16_to_float(halfYaw) / 100000.0f);
   float cosPitch = std::cos(fix16_to_float(halfPitch) / 100000.0f);

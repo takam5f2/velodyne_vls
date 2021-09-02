@@ -153,7 +153,7 @@ void setTFQuaternionRPY(
   tf2::Quaternion & quaternion, half roll, half pitch, half yaw);
 
 void setTFQuaternionRPY(
-  tf2::Quaternion & quaternion, fix16_t roll_mega, fix16_t pitch_mega, fix16_t yaw_mega);
+  tf2::Quaternion & quaternion, fix16_t roll, fix16_t pitch, fix16_t yaw);
 
 void setTFTransformRotation(
   tf2::Transform & transform, const tf2::Quaternion & quaternion,
