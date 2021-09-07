@@ -269,7 +269,6 @@ namespace velodyne_driver
     filter << "udp dst port " << port;
     pcap_compile(pcap_, &pcap_packet_filter_,
                  filter.str().c_str(), 1, PCAP_NETMASK_UNKNOWN);
-    pwait_time = NULL;
   }
 
   /** destructor */
@@ -278,14 +277,14 @@ namespace velodyne_driver
     pcap_close(pcap_);
   }
 
-  void InputPCAP::setPacketRate ( const double packet_rate)
+  void InputPCAP::setPacketRate(const double packet_rate)
   {
-    //packet_rate_(packet_rate);
-    if(pwait_time != NULL)
+    // Only update if changed
+    if (abs(1.0 / packet_rate_.expectedCycleTime().toSec() - packet_rate) > 0.1)
     {
-      delete pwait_time ;
+      packet_rate_ = ros::Rate(packet_rate);
     }
-    pwait_time = new ros::Duration(1.0/packet_rate);
+
   }
   /** @brief Get one velodyne packet. */
   int InputPCAP::getPacket(velodyne_msgs::VelodynePacket *pkt, const double time_offset)
@@ -310,10 +309,7 @@ namespace velodyne_driver
             // Keep the reader from blowing through the file.
             if (read_fast_ == false)
             {
-              if(pwait_time == NULL) // use initial estimated wait from configs
-                packet_rate_.sleep();
-              else
-                pwait_time->sleep();  // use auto rpm derived wait time
+              packet_rate_.sleep();
             }
 
             memcpy(&pkt->data[0], pkt_data+42, packet_size);
