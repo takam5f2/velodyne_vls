@@ -236,7 +236,7 @@ void RawData::unpack(const velodyne_msgs::VelodynePacket & pkt, DataContainerBas
         float distance = tmp.uint * calibration_.distance_resolution_m;
 
         bool is_invalid_distance = false;
-        if (distance == 0.0) {
+        if (distance < 1e-6) {
           is_invalid_distance = true;
           distance = 0.3;
         } else {
@@ -333,7 +333,7 @@ void RawData::unpack(const velodyne_msgs::VelodynePacket & pkt, DataContainerBas
         intensity = (intensity < min_intensity) ? min_intensity : intensity;
         intensity = (intensity > max_intensity) ? max_intensity : intensity;
 
-        double time_stamp =
+        const double time_stamp =
           i * 55.296 / 1000.0 / 1000.0 + j * 2.304 / 1000.0 / 1000.0 + pkt.stamp.toSec();
 
         // Temporary to stop compile error - fix to give VLP32 support
@@ -400,7 +400,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket &pkt, DataContain
       // of these warnings per minute.
       ROS_WARN_STREAM_THROTTLE(
         60, "skipping invalid VLP-16 packet: block " << block << " header value is "
-                                                    << raw->blocks[block].header);
+                                                     << raw->blocks[block].header);
       return;  // bad packet: skip the rest
     }
     
@@ -415,7 +415,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket &pkt, DataContain
       azimuth_next = raw->blocks[block + (1+dual_return)].rotation;
 
       // Finds the difference between two sucessive blocks
-      azimuth_diff = (float)((36000 + azimuth_next - azimuth) % 36000);
+      azimuth_diff = static_cast<float>((36000 + azimuth_next - azimuth) % 36000);
 
       // This is used when the last block is next to predict rotation amount
       last_azimuth_diff = azimuth_diff;
@@ -428,8 +428,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket &pkt, DataContain
 
     // condition added to avoid calculating points which are not in the interesting defined area (min_angle < area < max_angle)
     if ((config_.min_angle < config_.max_angle && azimuth >= config_.min_angle && azimuth <= config_.max_angle) || (config_.min_angle > config_.max_angle)) {
-      //for (int j = 0, k = 0; j < SCANS_PER_BLOCK; j++, k += RAW_SCAN_SIZE) {
-      for (int firing = 0, k = 0; firing < VLP16_FIRINGS_PER_BLOCK; firing++) {
+      for (int firing = 0, k = 0; firing < VLP16_FIRINGS_PER_BLOCK; ++firing) {
         for (int dsr = 0; dsr < VLP16_SCANS_PER_FIRING; dsr++, k += RAW_SCAN_SIZE) {
           // distance extraction
           current_return.bytes[0] = current_block.data[k];
@@ -455,9 +454,9 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket &pkt, DataContain
 
             distance = current_return.uint * calibration_.distance_resolution_m;
             bool is_invalid_distance = false;
-            if(distance == 0.0) {
-              is_invalid_distance = true;
-              distance = 0.3;
+            if(distance < 1e-6) {
+                is_invalid_distance = true;
+                distance = 0.3;
             }
             else {
               distance += corrections.dist_correction;
@@ -466,16 +465,16 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket &pkt, DataContain
             // correct for the laser rotation as a function of timing during the firings
             azimuth_corrected_f = azimuth + (azimuth_diff * ((dsr * VLP16_DSR_TOFFSET) + (firing * VLP16_FIRING_TOFFSET)) /
                     VLP16_BLOCK_TDURATION);
-            azimuth_corrected = ((int)round(azimuth_corrected_f)) % 36000;
+            azimuth_corrected = (static_cast<int>(round(azimuth_corrected_f))) % 36000;
 
             /*condition added to avoid calculating points which are not
             in the interesting defined area (min_angle < area < max_angle)*/
             if ((azimuth_corrected >= config_.min_angle
-                && azimuth_corrected <= config_.max_angle
-                && config_.min_angle < config_.max_angle)
-                ||(config_.min_angle > config_.max_angle
-                && (azimuth_corrected <= config_.max_angle
-                || azimuth_corrected >= config_.min_angle))){
+                 && azimuth_corrected <= config_.max_angle
+                 && config_.min_angle < config_.max_angle)
+                 ||(config_.min_angle > config_.max_angle
+                 && (azimuth_corrected <= config_.max_angle
+                 || azimuth_corrected >= config_.min_angle))){
 
               // convert polar coordinates to Euclidean XYZ
               cos_vert_angle = corrections.cos_vert_correction;
@@ -499,7 +498,7 @@ void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket &pkt, DataContain
               z_coord = distance * sin_vert_angle;      // velodyne z
               intensity = current_block.data[k + 2];
 
-              double time_stamp = (block * 2 + firing) * 55.296 / 1000.0 / 1000.0 +
+              const double time_stamp = (block * 2 + firing) * 55.296 / 1000.0 / 1000.0 +
                                 dsr * 2.304 / 1000.0 / 1000.0 + pkt.stamp.toSec();
 
               // Determine return type
@@ -621,7 +620,7 @@ void RawData::unpack_vls128(const velodyne_msgs::VelodynePacket &pkt, DataContai
       azimuth_next = raw->blocks[block + (1+dual_return)].rotation;
 
       // Finds the difference between two sucessive blocks
-      azimuth_diff = (float)((36000 + azimuth_next - azimuth) % 36000);
+      azimuth_diff = static_cast<float>((36000 + azimuth_next - azimuth) % 36000);
 
       // This is used when the last block is next to predict rotation amount
       last_azimuth_diff = azimuth_diff;
@@ -661,7 +660,7 @@ void RawData::unpack_vls128(const velodyne_msgs::VelodynePacket &pkt, DataContai
 
           distance = current_return.uint * VLP128_DISTANCE_RESOLUTION;
           bool is_invalid_distance = false;
-          if(distance == 0.0) {
+          if(distance < 1e-6) {
               is_invalid_distance = true;
               distance = 0.3;
           }
@@ -704,7 +703,7 @@ void RawData::unpack_vls128(const velodyne_msgs::VelodynePacket &pkt, DataContai
             z_coord = distance * sin_vert_angle;      // velodyne z
             intensity = current_block.data[k + 2];
 
-            double time_stamp = block * 55.3 / 1000.0 / 1000.0 + j * 2.665 / 1000.0 / 1000.0 + pkt.stamp.toSec();
+            const double time_stamp = block * 55.3 / 1000.0 / 1000.0 + j * 2.665 / 1000.0 / 1000.0 + pkt.stamp.toSec();
 
             // Determine return type
             uint8_t return_type;
