@@ -564,13 +564,13 @@ void RawData::unpack(const velodyne_msgs::msg::VelodynePacket & pkt, DataContain
    *  @param pkt raw packet to unpack
    *  @param pc shared pointer to point cloud (points are appended)
    */
-  void RawData::unpack_vlp16(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data) {
+  void RawData::unpack_vlp16(const velodyne_msgs::msg::VelodynePacket &pkt, DataContainerBase &data) {
 
     float last_azimuth_diff = 0;
     float azimuth_diff, azimuth_corrected_f;
     uint16_t azimuth, azimuth_next, azimuth_corrected;
     float x_coord, y_coord, z_coord;
-    float distance, intensity, other_intensity;
+    float distance, intensity, other_intensity = 0.f;
     const raw_packet_t *raw = (const raw_packet_t *) &pkt.data[0];
     union two_bytes current_return;
     union two_bytes other_return;
@@ -579,9 +579,7 @@ void RawData::unpack(const velodyne_msgs::msg::VelodynePacket & pkt, DataContain
     float cos_rot_angle, sin_rot_angle;
     float xy_distance;
 
-    uint8_t laser_number, firing_order, return_mode;
-
-    return_mode = pkt.data[1204];
+    uint8_t return_mode = pkt.data[1204];
     bool dual_return = (return_mode == RETURN_MODE_DUAL);
 
     for (int block = 0; block < BLOCKS_PER_PACKET; block++) {
@@ -590,9 +588,10 @@ void RawData::unpack(const velodyne_msgs::msg::VelodynePacket & pkt, DataContain
       if (UPPER_BANK != raw->blocks[block].header) {
         // Do not flood the log with messages, only issue at most one
         // of these warnings per minute.
-        ROS_WARN_STREAM_THROTTLE(
-          60, "skipping invalid VLP-16 packet: block " << block << " header value is "
-                                                      << raw->blocks[block].header);
+        RCLCPP_WARN_STREAM_THROTTLE(node_ptr_->get_logger(), *node_ptr_->get_clock(),
+         60000 /* ms */, "skipping invalid VLS-128 packet: block "
+                    << block << " header value is "
+                    << raw->blocks[block].header);
         return;  // bad packet: skip the rest
       }
       
@@ -708,7 +707,7 @@ void RawData::unpack(const velodyne_msgs::msg::VelodynePacket & pkt, DataContain
                 //   time = timing_offsets[block][j] + time_diff_start_to_this_packet;
 
                 double time_stamp = (block * 2 + firing) * 55.296 / 1000.0 / 1000.0 +
-                                  dsr * 2.304 / 1000.0 / 1000.0 + pkt.stamp.toSec();
+                                  dsr * 2.304 / 1000.0 / 1000.0 + rclcpp::Time(pkt.stamp).seconds();
 
                 // Determine return type
                 uint8_t return_type;
@@ -768,12 +767,13 @@ void RawData::unpack(const velodyne_msgs::msg::VelodynePacket & pkt, DataContain
    *  @param pkt raw packet to unpack
    *  @param pc shared pointer to point cloud (points are appended)
    */
-  void RawData::unpack_vls128(const velodyne_msgs::VelodynePacket &pkt, DataContainerBase &data) {
+  void RawData::unpack_vls128(const velodyne_msgs::msg::VelodynePacket &pkt, 
+    DataContainerBase &data) {
     float last_azimuth_diff = 0;
     float azimuth_diff, azimuth_corrected_f;
     uint16_t azimuth, azimuth_next, azimuth_corrected;
     float x_coord, y_coord, z_coord;
-    float distance, intensity, other_intensity;
+    float distance, intensity, other_intensity = 0.f;
     const raw_packet_t *raw = (const raw_packet_t *) &pkt.data[0];
     union two_bytes current_return;
     union two_bytes other_return;
