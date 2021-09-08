@@ -18,23 +18,23 @@
 
 namespace velodyne_pointcloud
 {
-void PointcloudXYZIRADT::addPoint(
-  const float & x, const float & y, const float & z,
-  const uint8_t & return_type, const uint16_t & ring, const uint16_t & azimuth,
-  const float & distance, const float & intensity, const double & time_stamp)
-{
-  velodyne_pointcloud::PointXYZIRADT point;
-  point.x = x;
-  point.y = y;
-  point.z = z;
-  point.intensity = intensity;
-  point.return_type = return_type;
-  point.ring = ring;
-  point.azimuth = azimuth;
-  point.distance = distance;
-  point.time_stamp = time_stamp;
+  void PointcloudXYZIRADT::addPoint(
+    const float & x, const float & y, const float & z,
+    const uint8_t & return_type, const uint16_t & ring, const uint16_t & azimuth,
+    const float & distance, const float & intensity, const double & time_stamp)
+  {
+    velodyne_pointcloud::PointXYZIRADT point;
+    point.x = x;
+    point.y = y;
+    point.z = z;
+    point.intensity = intensity;
+    point.return_type = return_type;
+    point.ring = ring;
+    point.azimuth = azimuth;
+    point.distance = distance;
+    point.time_stamp = time_stamp;
 
-  pc->points.push_back(point);
-  ++pc->width;
-}
+    pc->points.push_back(point);
+    ++pc->width;
+  }
 }  // namespace velodyne_pointcloud

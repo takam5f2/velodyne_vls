@@ -20,19 +20,21 @@
 
 namespace velodyne_pointcloud
 {
-class CloudNodelet : public nodelet::Nodelet
-{
+  class CloudNodelet: public nodelet::Nodelet
+  {
 public:
-  CloudNodelet() {}
-  ~CloudNodelet() {}
+    CloudNodelet() {
+    }
+    ~CloudNodelet() {
+    }
 
 private:
-  virtual void onInit();
-  boost::shared_ptr<Convert> conv_;
-};
+    virtual void onInit();
+    boost::shared_ptr < Convert > conv_;
+  };
 
 /** @brief Nodelet initialization. */
-void CloudNodelet::onInit() { conv_.reset(new Convert(getNodeHandle(), getPrivateNodeHandle())); }
+  void CloudNodelet::onInit() {conv_.reset(new Convert(getNodeHandle(), getPrivateNodeHandle()));}
 
 }  // namespace velodyne_pointcloud
 

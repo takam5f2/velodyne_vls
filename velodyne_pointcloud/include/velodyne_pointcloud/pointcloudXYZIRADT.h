@@ -24,18 +24,19 @@
 
 namespace velodyne_pointcloud
 {
-class PointcloudXYZIRADT : public velodyne_rawdata::DataContainerBase
-{
+  class PointcloudXYZIRADT: public velodyne_rawdata::DataContainerBase
+  {
 public:
-  pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr pc;
+    pcl::PointCloud < velodyne_pointcloud::PointXYZIRADT > ::Ptr pc;
 
-  PointcloudXYZIRADT() : pc(new pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>) {}
+    PointcloudXYZIRADT() : pc(new pcl::PointCloud < velodyne_pointcloud::PointXYZIRADT >) {
+    }
 
-  virtual void addPoint(
-    const float & x, const float & y, const float & z,
-    const uint8_t & return_type, const uint16_t & ring, const uint16_t & azimuth,
-    const float & distance, const float & intensity,
-    const double & time_stamp) override;
-};
+    virtual void addPoint(
+      const float & x, const float & y, const float & z,
+      const uint8_t & return_type, const uint16_t & ring, const uint16_t & azimuth,
+      const float & distance, const float & intensity,
+      const double & time_stamp) override;
+  };
 }  // namespace velodyne_pointcloud
 #endif

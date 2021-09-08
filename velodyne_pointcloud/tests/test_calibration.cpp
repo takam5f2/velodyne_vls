@@ -44,7 +44,7 @@ using namespace velodyne_pointcloud;
 std::string g_package_name("velodyne_pointcloud");
 std::string g_package_path;
 
-void init_global_data(void) { g_package_path = ros::package::getPath(g_package_name); }
+void init_global_data(void) {g_package_path = ros::package::getPath(g_package_name);}
 
 ///////////////////////////////////////////////////////////////
 // Test cases

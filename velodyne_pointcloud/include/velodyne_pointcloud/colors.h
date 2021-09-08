@@ -26,21 +26,22 @@
 namespace velodyne_pointcloud
 {
 // shorter names for point cloud types in this namespace
-typedef velodyne_pointcloud::PointXYZIR VPoint;
-typedef pcl::PointCloud<VPoint> VPointCloud;
+  typedef velodyne_pointcloud::PointXYZIR VPoint;
+  typedef pcl::PointCloud < VPoint > VPointCloud;
 
-class RingColors
-{
+  class RingColors
+  {
 public:
-  RingColors(ros::NodeHandle node, ros::NodeHandle private_nh);
-  ~RingColors() {}
+    RingColors(ros::NodeHandle node, ros::NodeHandle private_nh);
+    ~RingColors() {
+    }
 
 private:
-  void convertPoints(const VPointCloud::ConstPtr & inMsg);
+    void convertPoints(const VPointCloud::ConstPtr & inMsg);
 
-  ros::Subscriber input_;
-  ros::Publisher output_;
-};
+    ros::Subscriber input_;
+    ros::Publisher output_;
+  };
 
 }  // namespace velodyne_pointcloud
 
