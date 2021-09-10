@@ -300,6 +300,9 @@ bool VelodyneDriver::poll(void)
     // For correct pointcloud assembly, always stop the scan after passing the
     // zero phase point. The pointcloud assembler will remedy this after unpacking
     // the packets, by buffering the overshot azimuths for the next cloud.
+    // NOTE: this also works for dual echo mode because the last blank data block
+    // still contains azimuth data (for VLS128). This should be modified in future
+    // to concretely handle blank data blocks.
     packet_first_azm_phased = (36000 + packet_first_azm - phase) % 36000;
     packet_last_azm_phased = (36000 + packet_last_azm - phase) % 36000;
     if (processed_packets > 1)

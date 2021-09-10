@@ -72,6 +72,11 @@ static const uint16_t ROTATION_MAX_UNITS = 36000u;  // [deg/100]
 static const uint16_t UPPER_BANK = 0xeeff;
 static const uint16_t LOWER_BANK = 0xddff;
 
+/** Return Modes **/
+static const uint16_t RETURN_MODE_STRONGEST = 55;
+static const uint16_t RETURN_MODE_LAST = 56;
+static const uint16_t RETURN_MODE_DUAL = 57;
+
 /** Special Defines for VLP16 support **/
 static const int VLP16_FIRINGS_PER_BLOCK = 2;
 static const int VLP16_SCANS_PER_FIRING = 16;
@@ -139,6 +144,19 @@ typedef struct raw_packet
   uint16_t revolution;
   uint8_t status[PACKET_STATUS_SIZE];
 } raw_packet_t;
+
+/** \brief Velodyne echo types */
+enum RETURN_TYPE
+{
+  INVALID = 0,
+  SINGLE_STRONGEST = 1,
+  SINGLE_LAST = 2,
+  DUAL_STRONGEST_FIRST = 3,
+  DUAL_STRONGEST_LAST = 4,
+  DUAL_WEAK_FIRST = 5,
+  DUAL_WEAK_LAST = 6,
+  DUAL_ONLY = 7
+};
 
 /** \brief Velodyne data conversion class */
 class RawData
