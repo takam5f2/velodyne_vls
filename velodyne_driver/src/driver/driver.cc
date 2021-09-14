@@ -239,8 +239,7 @@ VelodyneDriver::VelodyneDriver(ros::NodeHandle node,
   if (dump_file != "")                  // have PCAP file?
     {
       // read data from packet capture file
-      input_.reset(new velodyne_driver::InputPCAP(private_nh, udp_port,
-                                                  packet_rate, dump_file));
+      input_.reset(new velodyne_driver::InputPCAP(private_nh, udp_port, dump_file));
     }
   else
     {
@@ -328,11 +327,6 @@ bool VelodyneDriver::poll(void)
   diag_topic_->tick(scan->header.stamp);
   diagnostics_.update();
 
-  if (dump_file != "" && processed_packets > 1)                  // have PCAP file?
-  {
-    double scan_packet_rate = (double)(processed_packets - 1)/(lastTimeStamp - firstTimeStamp).toSec();
-    input_->setPacketRate(scan_packet_rate);
-  }
   return true;
 }
 
