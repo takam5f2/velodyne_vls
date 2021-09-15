@@ -292,8 +292,8 @@ namespace velodyne_driver
               continue;
             }
 
-            memcpy(&pkt->data[0], pkt_data+42, packet_size);
-            pkt->stamp = rosTimeFromGpsTimestamp(&(pkt->data[1200])); // time_offset not considered here, as no synchronization required
+            memcpy(&pkt->data[0], pkt_data+BLOCK_LENGTH, packet_size);
+            pkt->stamp = rosTimeFromGpsTimestamp(&(pkt->data[TIMESTAMP_BYTE])); // time_offset not considered here, as no synchronization required
             empty_ = false;
 
             // Keep the reader from blowing through the file.
@@ -306,7 +306,7 @@ namespace velodyne_driver
                 ros::Time expected_end = last_packet_receive_time_ + expected_cycle_time;
                 ros::Time actual_end = ros::Time::now();
 
-                // D.etect backward jumps in time
+                // Detect backward jumps in time
                 if (actual_end < last_packet_receive_time_)
                 {
                   expected_end = actual_end + expected_cycle_time;
