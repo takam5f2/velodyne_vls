@@ -113,11 +113,6 @@ namespace velodyne_driver
     (void) close(sockfd_);
   }
 
-  void InputSocket::setPacketRate ( const double packet_rate)
-  {
-      return;
-  }
-
   /** @brief Get one velodyne packet. */
   int InputSocket::getPacket(velodyne_msgs::VelodynePacket *pkt, const double time_offset)
   {
@@ -227,14 +222,14 @@ namespace velodyne_driver
    *
    *  @param private_nh ROS private handle for calling node.
    *  @param port UDP port number
-   *  @param packet_rate expected device packet frequency (Hz)
    *  @param filename PCAP dump file name
    */
   InputPCAP::InputPCAP(ros::NodeHandle private_nh, uint16_t port,
-                       double packet_rate, std::string filename,
-                       bool read_once, bool read_fast, double repeat_delay):
+                       std::string filename, bool read_once,
+                       bool read_fast, double repeat_delay):
     Input(private_nh, port),
-    packet_rate_(packet_rate),
+    last_packet_receive_time_(0),
+    last_packet_stamp_(0),
     filename_(filename)
   {
     pcap_ = NULL;
@@ -269,7 +264,6 @@ namespace velodyne_driver
     filter << "udp dst port " << port;
     pcap_compile(pcap_, &pcap_packet_filter_,
                  filter.str().c_str(), 1, PCAP_NETMASK_UNKNOWN);
-    pwait_time = NULL;
   }
 
   /** destructor */
@@ -278,15 +272,6 @@ namespace velodyne_driver
     pcap_close(pcap_);
   }
 
-  void InputPCAP::setPacketRate ( const double packet_rate)
-  {
-    //packet_rate_(packet_rate);
-    if(pwait_time != NULL)
-    {
-      delete pwait_time ;
-    }
-    pwait_time = new ros::Duration(1.0/packet_rate);
-  }
   /** @brief Get one velodyne packet. */
   int InputPCAP::getPacket(velodyne_msgs::VelodynePacket *pkt, const double time_offset)
   {
@@ -307,18 +292,54 @@ namespace velodyne_driver
               continue;
             }
 
+            memcpy(&pkt->data[0], pkt_data+BLOCK_LENGTH, packet_size);
+            pkt->stamp = rosTimeFromGpsTimestamp(&(pkt->data[TIMESTAMP_BYTE])); // time_offset not considered here, as no synchronization required
+            empty_ = false;
+
             // Keep the reader from blowing through the file.
             if (read_fast_ == false)
             {
-              if(pwait_time == NULL) // use initial estimated wait from configs
-                packet_rate_.sleep();
-              else
-                pwait_time->sleep();  // use auto rpm derived wait time
-            }
+              if (last_packet_stamp_ != ros::Time(0.0) && last_packet_receive_time_ != ros::Time(0.0))
+              {
+                ros::Time current_packet_stamp = pkt->stamp;
+                ros::Duration expected_cycle_time = current_packet_stamp - last_packet_stamp_;
+                ros::Time expected_end = last_packet_receive_time_ + expected_cycle_time;
+                ros::Time actual_end = ros::Time::now();
 
-            memcpy(&pkt->data[0], pkt_data+42, packet_size);
-            pkt->stamp = rosTimeFromGpsTimestamp(&(pkt->data[1200])); // time_offset not considered here, as no synchronization required
-            empty_ = false;
+                // Detect backward jumps in time
+                if (actual_end < last_packet_receive_time_)
+                {
+                  expected_end = actual_end + expected_cycle_time;
+                }
+
+                // Calculate the time we'll sleep for.
+                ros::Duration sleep_time = expected_end - actual_end;
+
+                // Make sure to reset our start time.
+                last_packet_receive_time_ = expected_end;
+                last_packet_stamp_ = current_packet_stamp;
+                
+                // If we've taken too much time we won't sleep.
+                if(sleep_time <= ros::Duration(0.0))
+                {
+                  // If we've jumped forward in time, or the loop has taken more than a full extra
+                  // cycle, reset our cycle.
+                  if (actual_end > expected_end + expected_cycle_time)
+                  {
+                    last_packet_receive_time_ = actual_end;
+                  }                
+                }
+                else
+                {
+                  sleep_time.sleep();
+                }
+              }
+              else
+              {
+                last_packet_stamp_ = pkt->stamp;
+                last_packet_receive_time_ = ros::Time::now();
+              }              
+            }
             return 0;                   // success
           }
 

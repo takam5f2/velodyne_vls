@@ -152,50 +152,41 @@ VelodyneDriver::VelodyneDriver(ros::NodeHandle node,
   ROS_DEBUG_STREAM("tf_prefix: " << tf_prefix);
   config_.frame_id = tf::resolve(tf_prefix, config_.frame_id);
 
-  // get model name, validate string, determine packet rate
+  // get model name, validate string
   private_nh.param("model", config_.model, std::string("64E"));
-  double packet_rate;                   // packet frequency (Hz)
   std::string model_full_name;
   if ((config_.model == "64E_S2") ||
-      (config_.model == "64E_S2.1"))    // generates 1333312 points per second
-    {                                   // 1 packet holds 384 points
-      packet_rate = 3472.17;            // 1333312 / 384
+      (config_.model == "64E_S2.1"))
+    {
       model_full_name = std::string("HDL-") + config_.model;
     }
   else if (config_.model == "64E")
     {
-      packet_rate = 2600.0;
       model_full_name = std::string("HDL-") + config_.model;
     }
-  else if (config_.model == "64E_S3") // generates 2222220 points per second (half for strongest and half for lastest)
-    {                                 // 1 packet holds 384 points
-      packet_rate = 5787.03;          // 2222220 / 384
+  else if (config_.model == "64E_S3")
+    {
       model_full_name = std::string("HDL-") + config_.model;
     }
   else if (config_.model == "32E")
     {
-      packet_rate = 1808.0;
       model_full_name = std::string("HDL-") + config_.model;
     }
     else if (config_.model == "32C")
     {
-      packet_rate = 1507.0;
       model_full_name = std::string("VLP-") + config_.model;
     }
   else if (config_.model == "VLP16")
     {
-      packet_rate = 754;              // 754 Packets/Second for Last or Strongest mode 1508 for dual (VLP-16 User Manual)
       model_full_name = "VLP-16";
     }
   else if (config_.model == "VLS128")
     {
-      packet_rate = 6030;             // Datasheet gives 6253.9 packets/second, but experimentally closer to this
       model_full_name = "VLS-128";
     }
   else
     {
       ROS_ERROR_STREAM("Unknown Velodyne LIDAR model: " << config_.model);
-      packet_rate = 2600.0;
     }
   std::string deviceName(std::string("Velodyne ") + model_full_name);
 
@@ -239,8 +230,7 @@ VelodyneDriver::VelodyneDriver(ros::NodeHandle node,
   if (dump_file != "")                  // have PCAP file?
     {
       // read data from packet capture file
-      input_.reset(new velodyne_driver::InputPCAP(private_nh, udp_port,
-                                                  packet_rate, dump_file));
+      input_.reset(new velodyne_driver::InputPCAP(private_nh, udp_port, dump_file));
     }
   else
     {
@@ -331,11 +321,6 @@ bool VelodyneDriver::poll(void)
   diag_topic_->tick(scan->header.stamp);
   diagnostics_.update();
 
-  if (dump_file != "" && processed_packets > 1)                  // have PCAP file?
-  {
-    double scan_packet_rate = (double)(processed_packets - 1)/(lastTimeStamp - firstTimeStamp).toSec();
-    input_->setPacketRate(scan_packet_rate);
-  }
   return true;
 }
 
