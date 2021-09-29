@@ -169,48 +169,39 @@ VelodyneDriverCore::VelodyneDriverCore(rclcpp::Node * node_ptr)
 
   // get model name, validate string, determine packet rate
   config_.model = node_ptr_->declare_parameter("model", std::string("64E"));
-  double packet_rate;                   // packet frequency (Hz)
   std::string model_full_name;
   if ((config_.model == "64E_S2") ||
-      (config_.model == "64E_S2.1"))    // generates 1333312 points per second
-    {                                   // 1 packet holds 384 points
-      packet_rate = 3472.17;            // 1333312 / 384
+      (config_.model == "64E_S2.1"))
+    {
       model_full_name = std::string("HDL-") + config_.model;
     }
   else if (config_.model == "64E")
     {
-      packet_rate = 2600.0;
       model_full_name = std::string("HDL-") + config_.model;
     }
-  else if (config_.model == "64E_S3") // generates 2222220 points per second (half for strongest and half for lastest)
-    {                                 // 1 packet holds 384 points
-      packet_rate = 5787.03;          // 2222220 / 384
+  else if (config_.model == "64E_S3")
+    {
       model_full_name = std::string("HDL-") + config_.model;
     }
   else if (config_.model == "32E")
     {
-      packet_rate = 1808.0;
       model_full_name = std::string("HDL-") + config_.model;
     }
     else if (config_.model == "32C")
     {
-      packet_rate = 1507.0;
       model_full_name = std::string("VLP-") + config_.model;
     }
   else if (config_.model == "VLP16")
     {
-      packet_rate = 754;              // 754 Packets/Second for Last or Strongest mode 1508 for dual (VLP-16 User Manual)
       model_full_name = "VLP-16";
     }
   else if (config_.model == "VLS128")
     {
-      packet_rate = 6030;             // Datasheet gives 6253.9 packets/second, but experimentally closer to this
       model_full_name = "VLS-128";
     }
   else
     {
       RCLCPP_ERROR_STREAM(node_ptr_->get_logger(), "Unknown Velodyne LIDAR model: " << config_.model);
-      packet_rate = 2600.0;
     }
   std::string deviceName(std::string("Velodyne ") + model_full_name);
 
@@ -257,8 +248,7 @@ VelodyneDriverCore::VelodyneDriverCore(rclcpp::Node * node_ptr)
   if (dump_file != "")                  // have PCAP file?
     {
       // read data from packet capture file
-      input_.reset(new velodyne_driver::InputPCAP(node_ptr_, udp_port,
-                                                  packet_rate, dump_file));
+      input_.reset(new velodyne_driver::InputPCAP(node_ptr_, udp_port, dump_file));
     }
   else
     {
@@ -319,6 +309,9 @@ bool VelodyneDriverCore::poll(void)
     // For correct pointcloud assembly, always stop the scan after passing the
     // zero phase point. The pointcloud assembler will remedy this after unpacking
     // the packets, by buffering the overshot azimuths for the next cloud.
+    // NOTE: this also works for dual echo mode because the last blank data block
+    // still contains azimuth data (for VLS128). This should be modified in future
+    // to concretely handle blank data blocks.
     packet_first_azm_phased = (36000 + packet_first_azm - phase) % 36000;
     packet_last_azm_phased = (36000 + packet_last_azm - phase) % 36000;
     if (processed_packets > 1)
@@ -346,11 +339,6 @@ bool VelodyneDriverCore::poll(void)
   // its status
   diag_topic_->tick(scan->header.stamp);
 
-  if (dump_file != "" && processed_packets > 1)                  // have PCAP file?
-  {
-    double scan_packet_rate = (double)(processed_packets - 1)/(lastTimeStamp - firstTimeStamp).seconds();
-    input_->setPacketRate(scan_packet_rate);
-  }
   return true;
 }
 
