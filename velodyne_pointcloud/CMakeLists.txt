@@ -17,6 +17,8 @@ endif()
 set(CMAKE_BUILD_TYPE "Release")
 
 find_package(ament_cmake_auto REQUIRED)
+find_package(specialized_intra_process_comm REQUIRED)
+find_package(PCL REQUIRED)
 ament_auto_find_build_dependencies()
 
 

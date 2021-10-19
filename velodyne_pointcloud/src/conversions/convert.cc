@@ -22,6 +22,7 @@
 
 #include <velodyne_pointcloud/func.h>
 
+#include <specialized_intra_process_comm/specialized_intra_process_comm.hpp>
 namespace velodyne_pointcloud
 {
 
@@ -135,7 +136,11 @@ Convert::Convert(const rclcpp::NodeOptions & options)
 
   // advertise
   velodyne_points_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points", rclcpp::SensorDataQoS());
-  velodyne_points_ex_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_ex", rclcpp::SensorDataQoS());
+  velodyne_points_ex_pub_ = feature::create_intra_process_publisher<PointCloudSharedPtr>(this, "velodyne_points_ex", rclcpp::SensorDataQoS());
+  velodyne_points_ex_pub_->set_conversion_to_ros_message(this,
+    [](const PointCloudSharedPtr &source, sensor_msgs::msg::PointCloud2 &destination){
+      pcl::toROSMsg(*source, destination);
+    });
   velodyne_points_invalid_near_pub_ =
     this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_invalid_near", rclcpp::SensorDataQoS());
   velodyne_points_combined_ex_pub_ =
@@ -264,9 +269,11 @@ void Convert::processScan(const velodyne_msgs::msg::VelodyneScan::SharedPtr scan
       velodyne_points_pub_->publish(std::move(ros_pc_msg_ptr));
     }
     if (velodyne_points_ex_pub_->get_subscription_count() > 0) {
-      auto ros_pc_msg_ptr = std::make_unique<sensor_msgs::msg::PointCloud2>();
-      pcl::toROSMsg(*valid_points_xyziradt, *ros_pc_msg_ptr);
-      velodyne_points_ex_pub_->publish(std::move(ros_pc_msg_ptr));
+      auto ros_pc_msg_ptr = boost::make_shared<PointCloud>();
+      auto ros_pc_msg_ptr_msg = std::make_unique<PointCloudSharedPtr>(ros_pc_msg_ptr);
+
+      pcl::copyPointCloud(*valid_points_xyziradt, *ros_pc_msg_ptr);
+      velodyne_points_ex_pub_->publish(std::move(ros_pc_msg_ptr_msg));     
     }
   }
 
