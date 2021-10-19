@@ -26,12 +26,19 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <velodyne_pointcloud/pointcloudXYZIRADT.h>
+#include "specialized_intra_process_comm/specialized_intra_process_comm.hpp"
+#include "pcl/pcl_base.h"
 
 namespace velodyne_pointcloud
 {
 class Interpolate : public rclcpp::Node 
 {
 public:
+  using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
+  using PointCloudSharedPtr = boost::shared_ptr<PointCloud>;
+  using PointCloudSharedPtrUniquePtr = std::unique_ptr<PointCloudSharedPtr>;
+  using PointCloudMessageT = std::unique_ptr<PointCloudSharedPtr>;
+
   Interpolate(const rclcpp::NodeOptions & options);
   ~Interpolate() {}
 
@@ -40,16 +47,16 @@ private:
   rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
 
   void processPoints(
-    const sensor_msgs::msg::PointCloud2::SharedPtr points_xyziradt);
+    PointCloudMessageT points_xyziradt);
   void processTwist(const geometry_msgs::msg::TwistStamped::SharedPtr twist_msg);
   bool getTransform(
     const std::string & target_frame, const std::string & source_frame,
     tf2::Transform * tf2_transform_ptr);
 
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_ex_sub_;
+  feature::Subscription<PointCloudSharedPtr>::SharedPtr velodyne_points_ex_sub_;
   rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr twist_sub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_interpolate_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_interpolate_ex_pub_;
+  feature::Publisher<PointCloudSharedPtr>::SharedPtr velodyne_points_interpolate_pub_;
+  feature::Publisher<PointCloudSharedPtr>::SharedPtr velodyne_points_interpolate_ex_pub_;
 
   tf2::BufferCore tf2_buffer_;
   tf2_ros::TransformListener tf2_listener_;
