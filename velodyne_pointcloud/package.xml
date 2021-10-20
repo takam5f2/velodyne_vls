@@ -37,7 +37,6 @@
   <depend>visualization_msgs</depend>
   <depend>yaml-cpp</depend>
   <depend>specialized_intra_process_comm</depend>
-
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
 

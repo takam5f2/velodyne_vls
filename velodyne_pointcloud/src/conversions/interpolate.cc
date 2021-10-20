@@ -70,14 +70,14 @@ void Interpolate::processPoints(
     velodyne_points_interpolate_ex_pub_->get_subscription_count() <= 0) {
     return;
   }
-  PointCloudSharedPtr points_xyziradt_input = *points_xyziradt_msg;
-  pcl::PCLPointCloud2::Ptr points_xyziradt_pc2 = boost::make_shared<pcl::PCLPointCloud2>();
+  PointCloudSharedPtr points_xyziradt = *points_xyziradt_msg;
+/*  pcl::PCLPointCloud2::Ptr points_xyziradt_pc2 = boost::make_shared<pcl::PCLPointCloud2>();
   pcl::toPCLPointCloud2(*points_xyziradt_input, *points_xyziradt_pc2);
 
   pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr points_xyziradt(
     new pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>);
   pcl::fromPCLPointCloud2(*points_xyziradt_pc2, *points_xyziradt);
-
+*/
   pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate_points_xyziradt(
     new pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>);
   tf2::Transform tf2_base_link_to_sensor;

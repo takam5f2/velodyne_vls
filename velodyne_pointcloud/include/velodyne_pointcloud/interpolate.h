@@ -26,6 +26,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <velodyne_pointcloud/pointcloudXYZIRADT.h>
+#include <velodyne_pointcloud/point_types.h>
 #include "specialized_intra_process_comm/specialized_intra_process_comm.hpp"
 #include "pcl/pcl_base.h"
 
@@ -34,9 +35,8 @@ namespace velodyne_pointcloud
 class Interpolate : public rclcpp::Node 
 {
 public:
-  using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
+  using PointCloud = pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>;
   using PointCloudSharedPtr = boost::shared_ptr<PointCloud>;
-  using PointCloudSharedPtrUniquePtr = std::unique_ptr<PointCloudSharedPtr>;
   using PointCloudMessageT = std::unique_ptr<PointCloudSharedPtr>;
 
   Interpolate(const rclcpp::NodeOptions & options);

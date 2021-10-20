@@ -35,6 +35,7 @@
 #include <velodyne_pointcloud/pointcloudXYZIRADT.h>
 #include <velodyne_pointcloud/rawdata.h>
 
+#include <velodyne_pointcloud/point_types.h>
 #include "specialized_intra_process_comm/specialized_intra_process_comm.hpp"
 #include "pcl/pcl_base.h"
 
@@ -47,9 +48,8 @@ public:
   ~Convert() {}
 
 private:
-  using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
+  using PointCloud = pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>;
   using PointCloudSharedPtr = boost::shared_ptr<PointCloud>;
-  using PointCloudSharedPtrUniquePtr = std::unique_ptr<PointCloudSharedPtr>;
   using PointCloudMessageT = PointCloudSharedPtrUniquePtr;
 
   /** \brief Parameter service callback */
