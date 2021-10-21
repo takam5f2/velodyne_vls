@@ -55,7 +55,7 @@ private:
 
   feature::Subscription<PointCloudSharedPtr>::SharedPtr velodyne_points_ex_sub_;
   rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr twist_sub_;
-  feature::Publisher<PointCloudSharedPtr>::SharedPtr velodyne_points_interpolate_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr velodyne_points_interpolate_pub_;
   feature::Publisher<PointCloudSharedPtr>::SharedPtr velodyne_points_interpolate_ex_pub_;
 
   tf2::BufferCore tf2_buffer_;

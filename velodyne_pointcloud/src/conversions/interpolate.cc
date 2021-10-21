@@ -23,13 +23,8 @@ Interpolate::Interpolate(const rclcpp::NodeOptions & options)
 {
   // advertise
   velodyne_points_interpolate_pub_ =
-    feature::create_intra_process_publisher<PointCloudSharedPtr>(this, "velodyne_points_interpolate", rclcpp::SensorDataQoS());
-  velodyne_points_interpolate_pub_->set_conversion_to_ros_message(this,
-      [](const PointCloudSharedPtr &source,
-       sensor_msgs::msg::PointCloud2 &destination){
-    pcl::toROSMsg(*source, destination);
-    });
-  
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("velodyne_points_interpolate", rclcpp::SensorDataQoS());
+
   velodyne_points_interpolate_ex_pub_ =
     feature::create_intra_process_publisher<PointCloudSharedPtr>(this, "velodyne_points_interpolate_ex", rclcpp::SensorDataQoS());
   velodyne_points_interpolate_ex_pub_->set_conversion_to_ros_message(this,
@@ -63,7 +58,7 @@ void Interpolate::processTwist(const geometry_msgs::msg::TwistStamped::SharedPtr
 }
 
 void Interpolate::processPoints(
-  const PointCloudMessageT points_xyziradt_msg)
+  PointCloudMessageT points_xyziradt_msg)
 {
   if (
     velodyne_points_interpolate_pub_->get_subscription_count() <= 0 &&
@@ -71,13 +66,7 @@ void Interpolate::processPoints(
     return;
   }
   PointCloudSharedPtr points_xyziradt = *points_xyziradt_msg;
-/*  pcl::PCLPointCloud2::Ptr points_xyziradt_pc2 = boost::make_shared<pcl::PCLPointCloud2>();
-  pcl::toPCLPointCloud2(*points_xyziradt_input, *points_xyziradt_pc2);
 
-  pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr points_xyziradt(
-    new pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>);
-  pcl::fromPCLPointCloud2(*points_xyziradt_pc2, *points_xyziradt);
-*/
   pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>::Ptr interpolate_points_xyziradt(
     new pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>);
   tf2::Transform tf2_base_link_to_sensor;
@@ -86,19 +75,16 @@ void Interpolate::processPoints(
 
   if (velodyne_points_interpolate_pub_->get_subscription_count() > 0) {
     const auto interpolate_points_xyzir = convert(interpolate_points_xyziradt);
-    auto ros_pc_msg_ptr = boost::make_shared<PointCloud>();
-    auto ros_pc_msg_ptr_msg = std::make_unique<PointCloudSharedPtr>(ros_pc_msg_ptr);
-    //pcl::toROSMsg(*interpolate_points_xyzir, *ros_pc_msg_ptr);
-    pcl::copyPointCloud(*interpolate_points_xyzir, *ros_pc_msg_ptr);
-    velodyne_points_interpolate_pub_->publish(std::move(ros_pc_msg_ptr_msg));
+    auto ros_pc_msg_ptr = std::make_unique<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*interpolate_points_xyzir, *ros_pc_msg_ptr);
+    velodyne_points_interpolate_pub_->publish(std::move(ros_pc_msg_ptr));
   }
   if (velodyne_points_interpolate_ex_pub_->get_subscription_count() > 0) {
-    auto ros_pc_msg_ptr = boost::make_shared<PointCloud>();
-    auto ros_pc_msg_ptr_msg = std::make_unique<PointCloudSharedPtr>(
-      ros_pc_msg_ptr);  
-      //pcl::toROSMsg(*interpolate_points_xyziradt, *ros_pc_msg_ptr);
-    pcl::copyPointCloud(*interpolate_points_xyziradt, *ros_pc_msg_ptr);
-    velodyne_points_interpolate_ex_pub_->publish(std::move(ros_pc_msg_ptr_msg));
+    auto pc_xyziradt_msg_ptr = boost::make_shared<PointCloud>();
+    auto pc_xyziradt_msg_ptr_msg = std::make_unique<PointCloudSharedPtr>(
+      pc_xyziradt_msg_ptr);
+    pcl::copyPointCloud(*interpolate_points_xyziradt, *pc_xyziradt_msg_ptr);
+    velodyne_points_interpolate_ex_pub_->publish(std::move(pc_xyziradt_msg_ptr_msg));
   }
 }
 
