@@ -50,7 +50,7 @@ public:
 private:
   using PointCloud = pcl::PointCloud<velodyne_pointcloud::PointXYZIRADT>;
   using PointCloudSharedPtr = boost::shared_ptr<PointCloud>;
-  using PointCloudMessageT = PointCloudSharedPtrUniquePtr;
+  using PointCloudMessageT = std::unique_ptr<PointCloudSharedPtr>;
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
